@@ -183,8 +183,7 @@ class MockFont(object):
         self.lazy = False
 
     def getGlyphID(self, glyph):
-        gid = self._reverseGlyphOrder[glyph]
-        return gid
+        return self._reverseGlyphOrder[glyph]
 
     def getReverseGlyphMap(self):
         return self._reverseGlyphOrder

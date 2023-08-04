@@ -5,10 +5,7 @@ class FeatureLibError(Exception):
 
     def __str__(self):
         message = Exception.__str__(self)
-        if self.location:
-            return f"{self.location}: {message}"
-        else:
-            return message
+        return f"{self.location}: {message}" if self.location else message
 
 
 class IncludedFeaNotFound(FeatureLibError):

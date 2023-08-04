@@ -61,10 +61,7 @@ class PointInsidePen(BasePen):
         point lies within the (black) shape, and False if it doesn't.
         """
         winding = self.getWinding()
-        if self.evenOdd:
-            result = winding % 2
-        else:  # non-zero
-            result = self.intersectionCount != 0
+        result = winding % 2 if self.evenOdd else self.intersectionCount != 0
         return not not result
 
     def _addIntersection(self, goingUp):
@@ -143,23 +140,24 @@ class PointInsidePen(BasePen):
                 direction = 6 * ay * t + 2 * by
                 outgoingGoingUp = direction > 0.0
                 incomingGoingUp = not outgoingGoingUp
-                if direction == 0.0:
-                    direction = ay
-                    incomingGoingUp = outgoingGoingUp = direction > 0.0
+            if direction == 0.0:
+                direction = ay
+                incomingGoingUp = outgoingGoingUp = direction > 0.0
 
             xt = ax * t3 + bx * t2 + cx * t + dx
             if xt < x:
                 continue
 
-            if t in (0.0, -0.0):
-                if not outgoingGoingUp:
-                    self._addIntersection(outgoingGoingUp)
-            elif t == 1.0:
-                if incomingGoingUp:
-                    self._addIntersection(incomingGoingUp)
-            else:
-                if incomingGoingUp == outgoingGoingUp:
-                    self._addIntersection(outgoingGoingUp)
+            if (
+                t in (0.0, -0.0)
+                and not outgoingGoingUp
+                or t not in (0.0, -0.0)
+                and t != 1.0
+                and incomingGoingUp == outgoingGoingUp
+            ):
+                self._addIntersection(outgoingGoingUp)
+            elif t not in (0.0, -0.0) and (t != 1.0 or incomingGoingUp) and t == 1.0:
+                self._addIntersection(incomingGoingUp)
                 # else:
                 #   we're not really intersecting, merely touching
 

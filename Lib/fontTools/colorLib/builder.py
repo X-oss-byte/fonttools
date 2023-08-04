@@ -364,37 +364,37 @@ def buildCPAL(
     if any(v is not None for v in (paletteTypes, paletteLabels, paletteEntryLabels)):
         cpal.version = 1
 
-        if paletteTypes is not None:
-            if len(paletteTypes) != len(palettes):
-                raise ColorLibError(
-                    f"Expected {len(palettes)} paletteTypes, got {len(paletteTypes)}"
-                )
-            cpal.paletteTypes = [ColorPaletteType(t).value for t in paletteTypes]
-        else:
+        if paletteTypes is None:
             cpal.paletteTypes = [C_P_A_L_.table_C_P_A_L_.DEFAULT_PALETTE_TYPE] * len(
                 palettes
             )
 
-        if paletteLabels is not None:
-            if len(paletteLabels) != len(palettes):
-                raise ColorLibError(
-                    f"Expected {len(palettes)} paletteLabels, got {len(paletteLabels)}"
-                )
-            cpal.paletteLabels = buildPaletteLabels(paletteLabels, nameTable)
+        elif len(paletteTypes) != len(palettes):
+            raise ColorLibError(
+                f"Expected {len(palettes)} paletteTypes, got {len(paletteTypes)}"
+            )
         else:
+            cpal.paletteTypes = [ColorPaletteType(t).value for t in paletteTypes]
+        if paletteLabels is None:
             cpal.paletteLabels = [C_P_A_L_.table_C_P_A_L_.NO_NAME_ID] * len(palettes)
 
-        if paletteEntryLabels is not None:
-            if len(paletteEntryLabels) != cpal.numPaletteEntries:
-                raise ColorLibError(
-                    f"Expected {cpal.numPaletteEntries} paletteEntryLabels, "
-                    f"got {len(paletteEntryLabels)}"
-                )
-            cpal.paletteEntryLabels = buildPaletteLabels(paletteEntryLabels, nameTable)
+        elif len(paletteLabels) != len(palettes):
+            raise ColorLibError(
+                f"Expected {len(palettes)} paletteLabels, got {len(paletteLabels)}"
+            )
         else:
+            cpal.paletteLabels = buildPaletteLabels(paletteLabels, nameTable)
+        if paletteEntryLabels is None:
             cpal.paletteEntryLabels = [
                 C_P_A_L_.table_C_P_A_L_.NO_NAME_ID
             ] * cpal.numPaletteEntries
+        elif len(paletteEntryLabels) != cpal.numPaletteEntries:
+            raise ColorLibError(
+                f"Expected {cpal.numPaletteEntries} paletteEntryLabels, "
+                f"got {len(paletteEntryLabels)}"
+            )
+        else:
+            cpal.paletteEntryLabels = buildPaletteLabels(paletteEntryLabels, nameTable)
     else:
         cpal.version = 0
 
@@ -521,11 +521,7 @@ class LayerListBuilder:
 
     def __init__(self, *, allowLayerReuse=True):
         self.layers = []
-        if allowLayerReuse:
-            self.cache = LayerReuseCache()
-        else:
-            self.cache = None
-
+        self.cache = LayerReuseCache() if allowLayerReuse else None
         # We need to intercept construction of PaintColrLayers
         callbacks = _buildPaintCallbacks()
         callbacks[
@@ -617,9 +613,10 @@ def buildBaseGlyphPaintRecord(
 
 
 def _format_glyph_errors(errors: Mapping[str, Exception]) -> str:
-    lines = []
-    for baseGlyph, error in sorted(errors.items()):
-        lines.append(f"    {baseGlyph} => {type(error).__name__}: {error}")
+    lines = [
+        f"    {baseGlyph} => {type(error).__name__}: {error}"
+        for baseGlyph, error in sorted(errors.items())
+    ]
     return "\n".join(lines)
 
 

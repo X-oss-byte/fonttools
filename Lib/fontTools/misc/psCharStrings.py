@@ -82,7 +82,7 @@ def read_realNumber(self, b0, data, index):
 
 
 t1OperandEncoding = [None] * 256
-t1OperandEncoding[0:32] = (32) * [read_operator]
+t1OperandEncoding[:32] = (32) * [read_operator]
 t1OperandEncoding[32:247] = (247 - 32) * [read_byte]
 t1OperandEncoding[247:251] = (251 - 247) * [read_smallInt1]
 t1OperandEncoding[251:255] = (255 - 251) * [read_smallInt2]
@@ -125,14 +125,8 @@ def buildOperatorDict(operatorList):
     oper = {}
     opc = {}
     for item in operatorList:
-        if len(item) == 2:
-            oper[item[0]] = item[1]
-        else:
-            oper[item[0]] = item[1:]
-        if isinstance(item[0], tuple):
-            opc[item[1]] = item[0]
-        else:
-            opc[item[1]] = (item[0],)
+        oper[item[0]] = item[1] if len(item) == 2 else item[1:]
+        opc[item[1]] = item[0] if isinstance(item[0], tuple) else (item[0], )
     return oper, opc
 
 
@@ -274,18 +268,18 @@ def encodeFloat(f):
     if s[:2] == "0.":
         s = s[1:]
     elif s[:3] == "-0.":
-        s = "-" + s[2:]
+        s = f"-{s[2:]}"
     nibbles = []
     while s:
         c = s[0]
         s = s[1:]
         if c == "E":
             c2 = s[:1]
-            if c2 == "-":
+            if c2 == "+":
+                s = s[1:]
+            elif c2 == "-":
                 s = s[1:]
                 c = "E-"
-            elif c2 == "+":
-                s = s[1:]
         nibbles.append(realNibblesDict[c])
     nibbles.append(0xF)
     if len(nibbles) % 2:
@@ -334,15 +328,13 @@ class SimpleT2Decompiler(object):
                 break  # we're done!
             pushToProgram(token)
             if isOperator:
-                handlerName = "op_" + token
+                handlerName = f"op_{token}"
                 handler = getattr(self, handlerName, None)
-                if handler is not None:
-                    rv = handler(index)
-                    if rv:
-                        hintMaskBytes, index = rv
-                        pushToProgram(hintMaskBytes)
-                else:
+                if handler is None:
                     self.popall()
+                elif rv := handler(index):
+                    hintMaskBytes, index = rv
+                    pushToProgram(hintMaskBytes)
             else:
                 pushToStack(token)
         if needsDecompilation:
@@ -363,8 +355,7 @@ class SimpleT2Decompiler(object):
         self.operandStack.append(value)
 
     def op_return(self, index):
-        if self.operandStack:
-            pass
+        pass
 
     def op_endchar(self, index):
         pass
@@ -685,8 +676,7 @@ class T2OutlineExtractor(T2WidthExtractor):
 
     def op_endchar(self, index):
         self.endPath()
-        args = self.popallWidth()
-        if args:
+        if args := self.popallWidth():
             from fontTools.encodings.StandardEncoding import StandardEncoding
 
             # endchar can do seac accent bulding; The T2 spec says it's deprecated,
@@ -908,10 +898,7 @@ class T2OutlineExtractor(T2WidthExtractor):
     def alternatingLineto(self, isHorizontal):
         args = self.popall()
         for arg in args:
-            if isHorizontal:
-                point = (arg, 0)
-            else:
-                point = (0, arg)
+            point = (arg, 0) if isHorizontal else (0, arg)
             self.rLineTo(point)
             isHorizontal = not isHorizontal
 
@@ -1176,21 +1163,21 @@ class T2CharString(object):
         end = len(program)
         while i < end:
             token = program[i]
-            i = i + 1
+            i += 1
             if isinstance(token, str):
                 try:
                     bytecode.extend(bytechr(b) for b in opcodes[token])
                 except KeyError:
-                    raise CharStringCompileError("illegal operator: %s" % token)
+                    raise CharStringCompileError(f"illegal operator: {token}")
                 if token in ("hintmask", "cntrmask"):
                     bytecode.append(program[i])  # hint mask
-                    i = i + 1
+                    i += 1
             elif isinstance(token, int):
                 bytecode.append(encodeInt(token))
             elif isinstance(token, float):
                 bytecode.append(encodeFixed(token))
             else:
-                assert 0, "unsupported type: %s" % type(token)
+                assert 0, f"unsupported type: {type(token)}"
         try:
             bytecode = bytesjoin(bytecode)
         except TypeError:
@@ -1254,9 +1241,7 @@ class T2CharString(object):
                 if isOperator:
                     if token in ("hintmask", "cntrmask"):
                         hintMask, isOperator, index = self.getToken(index)
-                        bits = []
-                        for byte in hintMask:
-                            bits.append(num2binary(byteord(byte), 8))
+                        bits = [num2binary(byteord(byte), 8) for byte in hintMask]
                         hintMask = strjoin(bits)
                         line = " ".join(args + [token, hintMask])
                     else:
@@ -1290,7 +1275,7 @@ class T2CharString(object):
         i = 0
         while i < end:
             token = content[i]
-            i = i + 1
+            i += 1
             try:
                 token = int(token)
             except ValueError:
@@ -1304,7 +1289,7 @@ class T2CharString(object):
                         for j in range(0, len(mask), 8):
                             maskBytes = maskBytes + bytechr(binary2num(mask[j : j + 8]))
                         program.append(maskBytes)
-                        i = i + 1
+                        i += 1
                 else:
                     program.append(token)
             else:
@@ -1366,7 +1351,7 @@ class DictDecompiler(object):
         push = self.stack.append
         while index < lenData:
             b0 = byteord(data[index])
-            index = index + 1
+            index += 1
             handler = self.operandEncoding[b0]
             value, index = handler(self, b0, data, index)
             if value is not None:
@@ -1388,10 +1373,10 @@ class DictDecompiler(object):
             value = ()
             for i in range(len(argType) - 1, -1, -1):
                 arg = argType[i]
-                arghandler = getattr(self, "arg_" + arg)
+                arghandler = getattr(self, f"arg_{arg}")
                 value = (arghandler(operator),) + value
         else:
-            arghandler = getattr(self, "arg_" + argType)
+            arghandler = getattr(self, f"arg_{argType}")
             value = arghandler(operator)
         if operator == "blend":
             self.stack.extend(value)
@@ -1399,18 +1384,16 @@ class DictDecompiler(object):
             self.dict[operator] = value
 
     def arg_number(self, name):
-        if isinstance(self.stack[0], list):
-            out = self.arg_blend_number(self.stack)
-        else:
-            out = self.pop()
-        return out
+        return (
+            self.arg_blend_number(self.stack)
+            if isinstance(self.stack[0], list)
+            else self.pop()
+        )
 
     def arg_blend_number(self, name):
-        out = []
         blendArgs = self.pop()
         numMasters = len(blendArgs)
-        out.append(blendArgs)
-        out.append("blend")
+        out = [blendArgs, "blend"]
         dummy = self.popall()
         return blendArgs
 
@@ -1471,9 +1454,8 @@ class DictDecompiler(object):
 def calcSubrBias(subrs):
     nSubrs = len(subrs)
     if nSubrs < 1240:
-        bias = 107
+        return 107
     elif nSubrs < 33900:
-        bias = 1131
+        return 1131
     else:
-        bias = 32768
-    return bias
+        return 32768

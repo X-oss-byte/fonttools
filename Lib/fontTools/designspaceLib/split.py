@@ -229,9 +229,13 @@ def _extractSubSpace(
     subDoc.axisMappings = mappings = []
     subDocAxes = {axis.name for axis in subDoc.axes}
     for mapping in doc.axisMappings:
-        if not all(axis in subDocAxes for axis in mapping.inputLocation.keys()):
+        if any(
+            axis not in subDocAxes for axis in mapping.inputLocation.keys()
+        ):
             continue
-        if not all(axis in subDocAxes for axis in mapping.outputLocation.keys()):
+        if any(
+            axis not in subDocAxes for axis in mapping.outputLocation.keys()
+        ):
             LOGGER.error(
                 "In axis mapping from input %s, some output axes are not in the variable-font: %s",
                 mapping.inputLocation,
@@ -431,17 +435,10 @@ def _subsetRulesBasedOnConditions(
                 if selectionName not in cs:
                     # raise Exception("Selection has different axes than the rules")
                     continue
-                if isinstance(selectionValue, (float, int)):  # is point
                     # Case C-AP-in
-                    if selectionValue in cs[selectionName]:
-                        pass  # always matches, conditionset can stay empty for this one.
-                    # Case C-AP-out
-                    else:
+                if selectionValue not in cs[selectionName]:
+                    if isinstance(selectionValue, (float, int)):
                         discardConditionset = True
-                else:  # is range
-                    # Case C-AR-all
-                    if selectionValue in cs[selectionName]:
-                        pass  # always matches, conditionset can stay empty for this one.
                     else:
                         intersection = cs[selectionName].intersection(selectionValue)
                         # Case C-AR-inter

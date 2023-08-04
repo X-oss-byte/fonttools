@@ -424,7 +424,7 @@ class DecomposedTransform:
     tCenterY: float = 0
 
     @classmethod
-    def fromTransform(self, transform):
+    def fromTransform(cls, transform):
         # Adapted from an answer on
         # https://math.stackexchange.com/questions/13150/extracting-rotation-scale-values-from-2d-transformation-matrix
         a, b, c, d, x, y = transform
@@ -453,10 +453,6 @@ class DecomposedTransform:
             )
             scaleX, scaleY = (delta / s, s)
             skewX, skewY = (0, math.atan((a * c + b * d) / (s * s)))
-        else:
-            # a = b = c = d = 0
-            pass
-
         return DecomposedTransform(
             x,
             y,

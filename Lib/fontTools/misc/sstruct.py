@@ -72,8 +72,7 @@ def pack(fmt, obj):
         elif isinstance(value, str):
             value = tobytes(value)
         elements.append(value)
-    data = struct.pack(*(formatstring,) + tuple(elements))
-    return data
+    return struct.pack(*(formatstring,) + tuple(elements))
 
 
 def unpack(fmt, data, obj=None):
@@ -81,10 +80,7 @@ def unpack(fmt, data, obj=None):
         obj = {}
     data = tobytes(data)
     formatstring, names, fixes = getformat(fmt)
-    if isinstance(obj, dict):
-        d = obj
-    else:
-        d = obj.__dict__
+    d = obj if isinstance(obj, dict) else obj.__dict__
     elements = struct.unpack(formatstring, data)
     for i in range(len(names)):
         name = names[i]
@@ -146,15 +142,14 @@ def getformat(fmt, keep_pad_byte=False):
         for line in lines:
             if _emptyRE.match(line):
                 continue
-            m = _extraRE.match(line)
-            if m:
+            if m := _extraRE.match(line):
                 formatchar = m.group(1)
                 if formatchar != "x" and formatstring:
                     raise Error("a special fmt char must be first")
             else:
                 m = _elementRE.match(line)
                 if not m:
-                    raise Error("syntax error in fmt: '%s'" % line)
+                    raise Error(f"syntax error in fmt: '{line}'")
                 name = m.group(1)
                 formatchar = m.group(2)
                 if keep_pad_byte or formatchar != "x":

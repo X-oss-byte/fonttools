@@ -62,7 +62,6 @@ class T2CharStringPen(BasePen):
             program.insert(0, otRound(self._width))
         if not self._CFF2:
             program.append("endchar")
-        charString = T2CharString(
+        return T2CharString(
             program=program, private=private, globalSubrs=globalSubrs
         )
-        return charString

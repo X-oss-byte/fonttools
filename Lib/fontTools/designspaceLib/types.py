@@ -65,26 +65,28 @@ def locationInRegion(location: SimpleLocationDict, region: Region) -> bool:
         if name not in region:
             return False
         regionValue = region[name]
-        if isinstance(regionValue, (float, int)):
-            if value != regionValue:
-                return False
-        else:
-            if value not in regionValue:
-                return False
+        if (
+            isinstance(regionValue, (float, int))
+            and value != regionValue
+            or not isinstance(regionValue, (float, int))
+            and value not in regionValue
+        ):
+            return False
     return True
 
 
 def regionInRegion(region: Region, superRegion: Region) -> bool:
     for name, value in region.items():
-        if not name in superRegion:
+        if name not in superRegion:
             return False
         superValue = superRegion[name]
-        if isinstance(superValue, (float, int)):
-            if value != superValue:
-                return False
-        else:
-            if value not in superValue:
-                return False
+        if (
+            isinstance(superValue, (float, int))
+            and value != superValue
+            or not isinstance(superValue, (float, int))
+            and value not in superValue
+        ):
+            return False
     return True
 
 

@@ -59,14 +59,11 @@ class Cu2QuPen(FilterPen):
         if self.stats is not None:
             n = str(len(result) - 2)
             self.stats[n] = self.stats.get(n, 0) + 1
-        if self.all_quadratic:
+        if not self.all_quadratic and len(result) == 3 or self.all_quadratic:
             self.qCurveTo(*result[1:])
         else:
-            if len(result) == 3:
-                self.qCurveTo(*result[1:])
-            else:
-                assert len(result) == 4
-                super().curveTo(*result[1:])
+            assert len(result) == 4
+            super().curveTo(*result[1:])
 
     def curveTo(self, *points):
         n = len(points)
@@ -167,9 +164,7 @@ class Cu2QuPointPen(BasePointToSegmentPen):
             for i, sub_points in enumerate(
                 decomposeSuperBezierSegment([pt for pt, _, _, _ in points])
             ):
-                new_segment = []
-                for point in sub_points[:-1]:
-                    new_segment.append((point, False, None, {}))
+                new_segment = [(point, False, None, {}) for point in sub_points[:-1]]
                 if i == (num_sub_segments - 1):
                     # the last on-curve keeps its original attributes
                     new_segment.append((on_curve, smooth, name, kwargs))
@@ -187,31 +182,26 @@ class Cu2QuPointPen(BasePointToSegmentPen):
         last_offcurves = []
         points_required = self.__points_required
         for i, (segment_type, points) in enumerate(segments):
-            if segment_type in points_required:
-                n, op = points_required[segment_type]
-                assert op(len(points), n), (
-                    f"illegal {segment_type!r} segment point count: "
-                    f"expected {n}, got {len(points)}"
-                )
-                offcurves = points[:-1]
-                if i == 0:
-                    # any off-curve points preceding the first on-curve
-                    # will be appended at the end of the contour
-                    last_offcurves = offcurves
-                else:
-                    for (pt, smooth, name, kwargs) in offcurves:
-                        pen.addPoint(pt, None, smooth, name, **kwargs)
-                pt, smooth, name, kwargs = points[-1]
-                if pt is None:
-                    assert segment_type == "qcurve"
-                    # special quadratic contour with no on-curve points:
-                    # we need to skip the "None" point. See also the Pen
-                    # protocol's qCurveTo() method and fontTools.pens.basePen
-                    pass
-                else:
-                    pen.addPoint(pt, segment_type, smooth, name, **kwargs)
-            else:
+            if segment_type not in points_required:
                 raise AssertionError("unexpected segment type: %r" % segment_type)
+            n, op = points_required[segment_type]
+            assert op(len(points), n), (
+                f"illegal {segment_type!r} segment point count: "
+                f"expected {n}, got {len(points)}"
+            )
+            offcurves = points[:-1]
+            if i == 0:
+                # any off-curve points preceding the first on-curve
+                # will be appended at the end of the contour
+                last_offcurves = offcurves
+            else:
+                for (pt, smooth, name, kwargs) in offcurves:
+                    pen.addPoint(pt, None, smooth, name, **kwargs)
+            pt, smooth, name, kwargs = points[-1]
+            if pt is None:
+                assert segment_type == "qcurve"
+            else:
+                pen.addPoint(pt, segment_type, smooth, name, **kwargs)
         for (pt, smooth, name, kwargs) in last_offcurves:
             pen.addPoint(pt, None, smooth, name, **kwargs)
         pen.endPath()
@@ -292,13 +282,12 @@ class Cu2QuMultiPen:
         self.current_pts = current_pts
 
     def _curves_to_quadratic(self, pointsList):
-        curves = []
-        for current_pt, points in zip(self.current_pts, pointsList):
-            curves.append(current_pt + points)
+        curves = [
+            current_pt + points
+            for current_pt, points in zip(self.current_pts, pointsList)
+        ]
         quadratics = curves_to_quadratic(curves, [self.max_err] * len(curves))
-        pointsList = []
-        for quadratic in quadratics:
-            pointsList.append(quadratic[1:])
+        pointsList = [quadratic[1:] for quadratic in quadratics]
         self.qCurveTo(pointsList)
 
     def curveTo(self, pointsList):

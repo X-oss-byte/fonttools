@@ -24,10 +24,7 @@ class Vector(tuple):
                 "the 'keep' argument has been deprecated",
                 DeprecationWarning,
             )
-        if type(values) == Vector:
-            # No need to create a new object
-            return values
-        return super().__new__(cls, values)
+        return values if type(values) == Vector else super().__new__(cls, values)
 
     def __repr__(self):
         return f"{self.__class__.__name__}({super().__repr__()})"

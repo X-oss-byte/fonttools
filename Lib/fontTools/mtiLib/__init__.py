@@ -43,7 +43,7 @@ def makeGlyph(s):
         return ttLib.TTFont._makeGlyphName(int(s[2:], 16))
     elif s[:2] == "# ":
         return "glyph%.5d" % int(s[2:])
-    assert s.find(" ") < 0, "Space found in glyph name: %s" % s
+    assert s.find(" ") < 0, f"Space found in glyph name: {s}"
     assert s, "Glyph name is empty"
     return s
 
@@ -183,7 +183,7 @@ def parseFeatureList(lines, lookupMap=None, featureMap=None):
         for line in lines:
             name, featureTag, lookups = line
             if featureMap is not None:
-                assert name not in featureMap, "Duplicate feature name: %s" % name
+                assert name not in featureMap, f"Duplicate feature name: {name}"
                 featureMap[name] = len(self.FeatureRecord)
             # If feature name is integer, make sure it matches its index.
             try:
@@ -222,13 +222,12 @@ def parseLookupFlags(lines):
     ]
     while lines.peeks()[0].lower() in allFlags:
         line = next(lines)
-        flag = {
+        if flag := {
             "righttoleft": 0x0001,
             "ignorebaseglyphs": 0x0002,
             "ignoreligatures": 0x0004,
             "ignoremarks": 0x0008,
-        }.get(line[0].lower())
-        if flag:
+        }.get(line[0].lower()):
             assert line[1].lower() in ["yes", "no"], line[1]
             if line[1].lower() == "yes":
                 flags |= flag
@@ -306,9 +305,9 @@ def parsePair(lines, font, _lookupMap=None):
             mask = valueRecordFormatDict[what][0]
             glyph1, glyph2 = makeGlyphs(line[1:3])
             value = int(line[3])
-            if not glyph1 in values:
+            if glyph1 not in values:
                 values[glyph1] = {}
-            if not glyph2 in values[glyph1]:
+            if glyph2 not in values[glyph1]:
                 values[glyph1][glyph2] = (ValueRecord(), ValueRecord())
             rec2 = values[glyph1][glyph2]
             if side == "left":
@@ -350,9 +349,9 @@ def parsePair(lines, font, _lookupMap=None):
         self.Class1Count, self.Class2Count = (
             1 + max(c.classDefs.values()) for c in classDefs
         )
-        self.Class1Record = [ot.Class1Record() for i in range(self.Class1Count)]
+        self.Class1Record = [ot.Class1Record() for _ in range(self.Class1Count)]
         for rec1 in self.Class1Record:
-            rec1.Class2Record = [ot.Class2Record() for j in range(self.Class2Count)]
+            rec1.Class2Record = [ot.Class2Record() for _ in range(self.Class2Count)]
             for rec2 in rec1.Class2Record:
                 rec2.Value1 = ValueRecord()
                 rec2.Value2 = ValueRecord()
@@ -411,7 +410,7 @@ def makeAnchor(data, klass=ot.Anchor):
 def parseCursive(lines, font, _lookupMap=None):
     records = {}
     for line in lines:
-        assert len(line) in [3, 4], line
+        assert len(line) in {3, 4}, line
         idx, klass = {
             "entry": (0, ot.EntryAnchor),
             "exit": (1, ot.ExitAnchor),
@@ -461,7 +460,7 @@ def makeLigatureRecords(data, coverage, c, classCount):
         if record is None:
             record = records[idx[glyph]] = ot.LigatureAttach()
             record.ComponentCount = compCount
-            record.ComponentRecord = [ot.ComponentRecord() for i in range(compCount)]
+            record.ComponentRecord = [ot.ComponentRecord() for _ in range(compCount)]
             for compRec in record.ComponentRecord:
                 compRec.LigatureAnchor = [None] * classCount
         assert record.ComponentCount == compCount, (
@@ -515,9 +514,9 @@ def parseMarkToSomething(lines, font, c):
     self.ClassCount = maxKlass + 1
 
     # Base
-    self.classCount = 0 if not baseData else 1 + max(k[1] for k, v in baseData.items())
+    self.classCount = 0 if not baseData else 1 + max(k[1] for k in baseData)
     baseCoverage = makeCoverage(
-        set([k[0] for k in baseData.keys()]), font, c.BaseCoverageClass
+        {k[0] for k in baseData}, font, c.BaseCoverageClass
     )
     baseArray = c.BaseArrayClass()
     if c.Base == "Ligature":
@@ -546,7 +545,7 @@ class MarkHelper(object):
                 setattr(self, key, value)
                 if What != "Count":
                     klass = getattr(ot, value)
-                    setattr(self, key + "Class", klass)
+                    setattr(self, f"{key}Class", klass)
 
 
 class MarkToBaseHelper(MarkHelper):
@@ -613,7 +612,7 @@ class ContextHelper(object):
         self.InputIdx = InputIdx
         self.DataLen = DataLen
 
-        self.LookupRecord = Type + "LookupRecord"
+        self.LookupRecord = f"{Type}LookupRecord"
 
         if Format == 1:
             Coverage = lambda r: r.Coverage
@@ -693,7 +692,7 @@ class ContextHelper(object):
                 ) = (len(x) for x in d)
 
         else:
-            assert 0, "unknown format: %s" % Format
+            assert 0, f"unknown format: {Format}"
 
         if Chain:
             self.Coverage = ChainCoverage
@@ -709,16 +708,16 @@ class ContextHelper(object):
             self.SetRuleData = SetRuleData
 
         if Format == 1:
-            self.Rule = ChainTyp + "Rule"
-            self.RuleCount = ChainTyp + "RuleCount"
-            self.RuleSet = ChainTyp + "RuleSet"
-            self.RuleSetCount = ChainTyp + "RuleSetCount"
+            self.Rule = f"{ChainTyp}Rule"
+            self.RuleCount = f"{ChainTyp}RuleCount"
+            self.RuleSet = f"{ChainTyp}RuleSet"
+            self.RuleSetCount = f"{ChainTyp}RuleSetCount"
             self.Intersect = lambda glyphs, c, r: [r] if r in glyphs else []
         elif Format == 2:
-            self.Rule = ChainTyp + "ClassRule"
-            self.RuleCount = ChainTyp + "ClassRuleCount"
-            self.RuleSet = ChainTyp + "ClassSet"
-            self.RuleSetCount = ChainTyp + "ClassSetCount"
+            self.Rule = f"{ChainTyp}ClassRule"
+            self.RuleCount = f"{ChainTyp}ClassRuleCount"
+            self.RuleSet = f"{ChainTyp}ClassSet"
+            self.RuleSetCount = f"{ChainTyp}ClassSetCount"
             self.Intersect = lambda glyphs, c, r: (
                 c.intersect_class(glyphs, r)
                 if c
@@ -776,8 +775,7 @@ def makeCoverage(glyphs, font, klass=ot.Coverage):
 def parseCoverage(lines, font, klass=ot.Coverage):
     glyphs = []
     with lines.between("coverage definition"):
-        for line in lines:
-            glyphs.append(makeGlyph(line[0]))
+        glyphs.extend(makeGlyph(line[0]) for line in lines)
     return makeCoverage(glyphs, font, klass)
 
 
@@ -797,7 +795,7 @@ def bucketizeRules(self, c, rules, bucketKeys):
         for seq, recs in buckets[firstGlyph]:
             rule = getattr(ot, c.Rule)()
             c.SetRuleData(rule, seq)
-            setattr(rule, c.Type + "Count", len(recs))
+            setattr(rule, f"{c.Type}Count", len(recs))
             setattr(rule, c.LookupRecord, recs)
             thisRules.append(rule)
 
@@ -826,7 +824,7 @@ def parseContext(lines, font, Type, lookupMap=None):
             recs = parseLookupRecords(line[1 + c.DataLen :], c.LookupRecord, lookupMap)
             rules.append((seq, recs))
 
-        firstGlyphs = set(seq[c.InputIdx][0] for seq, recs in rules)
+        firstGlyphs = {seq[c.InputIdx][0] for seq, recs in rules}
         self.Coverage = makeCoverage(firstGlyphs, font)
         bucketizeRules(self, c, rules, self.Coverage.glyphs)
     elif typ.endswith("class"):
@@ -857,17 +855,19 @@ def parseContext(lines, font, Type, lookupMap=None):
             seq = tuple(intSplitComma(i) for i in line[1 : 1 + c.DataLen])
             recs = parseLookupRecords(line[1 + c.DataLen :], c.LookupRecord, lookupMap)
             rules.append((seq, recs))
-        firstClasses = set(seq[c.InputIdx][0] for seq, recs in rules)
-        firstGlyphs = set(
-            g for g, c in classDefs[c.InputIdx].classDefs.items() if c in firstClasses
-        )
+        firstClasses = {seq[c.InputIdx][0] for seq, recs in rules}
+        firstGlyphs = {
+            g
+            for g, c in classDefs[c.InputIdx].classDefs.items()
+            if c in firstClasses
+        }
         self.Coverage = makeCoverage(firstGlyphs, font)
         bucketizeRules(self, c, rules, range(max(firstClasses) + 1))
     elif typ.endswith("coverage"):
         self.Format = 3
         log.debug("Parsing %s format %s", Type, self.Format)
         c = ContextHelper(Type, self.Format)
-        coverages = tuple([] for i in range(c.DataLen))
+        coverages = tuple([] for _ in range(c.DataLen))
         while lines.peeks()[0].endswith("coverage definition begin"):
             typ = lines.peek()[0][: -len("coverage definition begin")].lower()
             idx, klass = {
@@ -887,7 +887,7 @@ def parseContext(lines, font, Type, lookupMap=None):
         line = lines[0]
         assert line[0].lower() == "coverage", line[0]
         recs = parseLookupRecords(line[1:], c.LookupRecord, lookupMap)
-        setattr(self, c.Type + "Count", len(recs))
+        setattr(self, f"{c.Type}Count", len(recs))
         setattr(self, c.LookupRecord, recs)
     else:
         assert 0, typ
@@ -982,11 +982,7 @@ def parseLookup(lines, tableTag, font, lookupMap=None):
 
     lookup.SubTable = subtables
     lookup.SubTableCount = len(lookup.SubTable)
-    if lookup.SubTableCount == 0:
-        # Remove this return when following is fixed:
-        # https://github.com/fonttools/fonttools/issues/789
-        return None
-    return lookup
+    return None if lookup.SubTableCount == 0 else lookup
 
 
 def parseGSUBGPOS(lines, font, tableTag):
@@ -1024,7 +1020,7 @@ def parseGSUBGPOS(lines, font, tableTag):
             _, name, _ = lines.peek()
             lookup = parseLookup(lines, tableTag, font, lookupMap)
             if lookupMap is not None:
-                assert name not in lookupMap, "Duplicate lookup name: %s" % name
+                assert name not in lookupMap, f"Duplicate lookup name: {name}"
                 lookupMap[name] = len(self.LookupList.Lookup)
             else:
                 assert int(name) == len(self.LookupList.Lookup), "%d %d" % (
@@ -1240,12 +1236,11 @@ class Tokenizer(object):
                 return line
 
     def _next_buffered(self):
-        if self.buffer:
-            ret = self.buffer
-            self.buffer = None
-            return ret
-        else:
+        if not self.buffer:
             return self._next_nonempty()
+        ret = self.buffer
+        self.buffer = None
+        return ret
 
     def __next__(self):
         line = self._next_buffered()
@@ -1263,9 +1258,7 @@ class Tokenizer(object):
                 self.buffer = self._next_nonempty()
             except StopIteration:
                 return None
-        if self.buffer[0].lower() in self.stoppers:
-            return None
-        return self.buffer
+        return None if self.buffer[0].lower() in self.stoppers else self.buffer
 
     def peeks(self):
         ret = self.peek()
@@ -1273,13 +1266,13 @@ class Tokenizer(object):
 
     @contextmanager
     def between(self, tag):
-        start = tag + " begin"
-        end = tag + " end"
+        start = f"{tag} begin"
+        end = f"{tag} end"
         self.expectendswith(start)
         self.stoppers.append(end)
         yield
         del self.stoppers[-1]
-        self.expect(tag + " end")
+        self.expect(f"{tag} end")
 
     @contextmanager
     def until(self, tags):
@@ -1292,13 +1285,13 @@ class Tokenizer(object):
     def expect(self, s):
         line = next(self)
         tag = line[0].lower()
-        assert tag == s, "Expected '%s', got '%s'" % (s, tag)
+        assert tag == s, f"Expected '{s}', got '{tag}'"
         return line
 
     def expectendswith(self, s):
         line = next(self)
         tag = line[0].lower()
-        assert tag.endswith(s), "Expected '*%s', got '%s'" % (s, tag)
+        assert tag.endswith(s), f"Expected '*{s}', got '{tag}'"
         return line
 
 
@@ -1370,11 +1363,7 @@ def main(args=None, font=None):
     args = parser.parse_args(args)
 
     if font is None:
-        if args.font:
-            font = ttLib.TTFont(args.font)
-        else:
-            font = MockFont()
-
+        font = ttLib.TTFont(args.font) if args.font else MockFont()
     for f in args.inputs:
         log.debug("Processing %s", f)
         with open(f, "rt", encoding="utf-8") as f:

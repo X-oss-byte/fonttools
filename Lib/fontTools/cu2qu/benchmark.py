@@ -9,8 +9,8 @@ MAX_ERR = 0.05
 
 def generate_curve():
     return [
-        tuple(float(random.randint(0, 2048)) for coord in range(2))
-        for point in range(4)
+        tuple(float(random.randint(0, 2048)) for _ in range(2))
+        for _ in range(4)
     ]
 
 
@@ -20,16 +20,16 @@ def setup_curve_to_quadratic():
 
 def setup_curves_to_quadratic():
     num_curves = 3
-    return ([generate_curve() for curve in range(num_curves)], [MAX_ERR] * num_curves)
+    return [generate_curve() for _ in range(num_curves)], [MAX_ERR] * num_curves
 
 
 def run_benchmark(module, function, setup_suffix="", repeat=5, number=1000):
-    setup_func = "setup_" + function
+    setup_func = f"setup_{function}"
     if setup_suffix:
-        print("%s with %s:" % (function, setup_suffix), end="")
-        setup_func += "_" + setup_suffix
+        print(f"{function} with {setup_suffix}:", end="")
+        setup_func += f"_{setup_suffix}"
     else:
-        print("%s:" % function, end="")
+        print(f"{function}:", end="")
 
     def wrapper(function, setup_func):
         function = globals()[function]

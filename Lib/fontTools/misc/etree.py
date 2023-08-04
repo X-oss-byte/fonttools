@@ -102,8 +102,7 @@ except ImportError:
         if include and "start" in events:
             yield ("start", element)
         for e in element:
-            for item in _iterwalk(e, events, tag):
-                yield item
+            yield from _iterwalk(e, events, tag)
         if include:
             yield ("end", element)
 
@@ -118,8 +117,7 @@ except ImportError:
             element = element_or_tree.getroot()
         if tag == "*":
             tag = None
-        for item in _iterwalk(element, events, tag):
-            yield item
+        yield from _iterwalk(element, events, tag)
 
     _ElementTree = ElementTree
 
@@ -334,16 +332,10 @@ except ImportError:
                     prefix = namespaces.get(uri)
                     if prefix is None:
                         prefix = _namespace_map.get(uri)
-                        if prefix is None:
-                            prefix = "ns%d" % len(namespaces)
-                        else:
-                            prefix = _tounicode(prefix)
+                        prefix = "ns%d" % len(namespaces) if prefix is None else _tounicode(prefix)
                         if prefix != "xml":
                             namespaces[uri] = prefix
-                    if prefix:
-                        qnames[qname] = "%s:%s" % (prefix, tag)
-                    else:
-                        qnames[qname] = tag  # default element
+                    qnames[qname] = f"{prefix}:{tag}" if prefix else tag
                 else:
                     qnames[qname] = qname
             except TypeError:
@@ -376,9 +368,9 @@ except ImportError:
         tag = elem.tag
         text = elem.text
         if tag is Comment:
-            write("<!--%s-->" % _tounicode(text))
+            write(f"<!--{_tounicode(text)}-->")
         elif tag is ProcessingInstruction:
-            write("<?%s?>" % _tounicode(text))
+            write(f"<?{_tounicode(text)}?>")
         else:
             tag = qnames[_tounicode(tag) if tag is not None else None]
             if tag is None:
@@ -387,16 +379,15 @@ except ImportError:
                 for e in elem:
                     _serialize_xml(write, e, qnames, None)
             else:
-                write("<" + tag)
+                write(f"<{tag}")
                 if namespaces:
                     for uri, prefix in sorted(
                         namespaces.items(), key=lambda x: x[1]
                     ):  # sort on prefix
                         if prefix:
-                            prefix = ":" + prefix
-                        write(' xmlns%s="%s"' % (prefix, _escape_attrib(uri)))
-                attrs = elem.attrib
-                if attrs:
+                            prefix = f":{prefix}"
+                        write(f' xmlns{prefix}="{_escape_attrib(uri)}"')
+                if attrs := elem.attrib:
                     # try to keep existing attrib order
                     if len(attrs) <= 1 or type(attrs) is _Attrib:
                         items = attrs.items()
@@ -404,22 +395,16 @@ except ImportError:
                         # if plain dict, use lexical order
                         items = sorted(attrs.items())
                     for k, v in items:
-                        if isinstance(k, QName):
-                            k = _tounicode(k.text)
-                        else:
-                            k = _tounicode(k)
-                        if isinstance(v, QName):
-                            v = qnames[_tounicode(v.text)]
-                        else:
-                            v = _escape_attrib(v)
-                        write(' %s="%s"' % (qnames[k], v))
+                        k = _tounicode(k.text) if isinstance(k, QName) else _tounicode(k)
+                        v = qnames[_tounicode(v.text)] if isinstance(v, QName) else _escape_attrib(v)
+                        write(f' {qnames[k]}="{v}"')
                 if text is not None or len(elem):
                     write(">")
                     if text:
                         write(_escape_cdata(text))
                     for e in elem:
                         _serialize_xml(write, e, qnames, None)
-                    write("</" + tag + ">")
+                    write(f"</{tag}>")
                 else:
                     write("/>")
         if elem.tail:
@@ -466,13 +451,12 @@ except ImportError:
         i = "\n" + level * "  "
         if len(elem):
             if not elem.text or not elem.text.strip():
-                elem.text = i + "  "
+                elem.text = f"{i}  "
             if not elem.tail or not elem.tail.strip():
                 elem.tail = i
             for elem in elem:
                 _indent(elem, level + 1)
             if not elem.tail or not elem.tail.strip():
                 elem.tail = i
-        else:
-            if level and (not elem.tail or not elem.tail.strip()):
-                elem.tail = i
+        elif level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i

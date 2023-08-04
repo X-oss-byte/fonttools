@@ -14,9 +14,7 @@ def _round_point(pt):
 
 def _unit_vector(vec):
     length = hypot(*vec)
-    if length == 0:
-        return None
-    return (vec[0] / length, vec[1] / length)
+    return None if length == 0 else (vec[0] / length, vec[1] / length)
 
 
 _CIRCLE_INSIDE_TOLERANCE = 1e-4

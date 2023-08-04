@@ -211,12 +211,7 @@ class PointToSegmentPen(BasePointToSegmentPen):
             closed = True
             segmentType, points = segments[-1]
             movePt, _, _, _ = points[-1]
-        if movePt is None:
-            # quad special case: a contour with no on-curve points contains
-            # one "qcurve" segment that ends with a point that's None. We
-            # must not output a moveTo() in that case.
-            pass
-        else:
+        if movePt is not None:
             pen.moveTo(movePt)
         outputImpliedClosingLine = self.outputImpliedClosingLine
         nSegments = len(segments)
@@ -271,10 +266,7 @@ class SegmentToPointPen(AbstractPen):
     """
 
     def __init__(self, pointPen, guessSmooth=True):
-        if guessSmooth:
-            self.pen = GuessSmoothPointPen(pointPen)
-        else:
-            self.pen = pointPen
+        self.pen = GuessSmoothPointPen(pointPen) if guessSmooth else pointPen
         self.contour = None
 
     def _flushContour(self):
@@ -285,8 +277,7 @@ class SegmentToPointPen(AbstractPen):
         pen.endPath()
 
     def moveTo(self, pt):
-        self.contour = []
-        self.contour.append((pt, "move"))
+        self.contour = [(pt, "move")]
 
     def lineTo(self, pt):
         if self.contour is None:
@@ -307,9 +298,8 @@ class SegmentToPointPen(AbstractPen):
             raise TypeError("Must pass in at least one point")
         if pts[-1] is None:
             self.contour = []
-        else:
-            if self.contour is None:
-                raise PenError("Contour missing required initial moveTo")
+        elif self.contour is None:
+            raise PenError("Contour missing required initial moveTo")
         for pt in pts[:-1]:
             self.contour.append((pt, None))
         if pts[-1] is not None:
@@ -382,7 +372,7 @@ class GuessSmoothPointPen(AbstractPointPen):
             pt = points[i][0]
             prevPt = points[prev][0]
             nextPt = points[next][0]
-            if pt != prevPt and pt != nextPt:
+            if pt not in [prevPt, nextPt]:
                 dx1, dy1 = pt[0] - prevPt[0], pt[1] - prevPt[1]
                 dx2, dy2 = nextPt[0] - pt[0], nextPt[1] - pt[1]
                 a1 = math.atan2(dy1, dx1)
@@ -466,19 +456,10 @@ class ReverseContourPointPen(AbstractPointPen):
             #   for N in range(len(originalContour)):
             #       originalContour[N] == reversedContour[-N]
             contour.append(contour.pop(0))
-            # Find the first on-curve point.
-            firstOnCurve = None
-            for i in range(len(contour)):
-                if contour[i][1] is not None:
-                    firstOnCurve = i
-                    break
-            if firstOnCurve is None:
-                # There are no on-curve points, be basically have to
-                # do nothing but contour.reverse().
-                lastSegmentType = None
-            else:
-                lastSegmentType = contour[firstOnCurve][1]
-
+            firstOnCurve = next(
+                (i for i in range(len(contour)) if contour[i][1] is not None), None
+            )
+            lastSegmentType = None if firstOnCurve is None else contour[firstOnCurve][1]
         contour.reverse()
         if not closed:
             # Open paths must start with a move, so we simply dump

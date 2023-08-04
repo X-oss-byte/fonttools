@@ -23,47 +23,44 @@ class Visitor(object):
                 for clazz in clazzes:
                     _visitors = celf._visitors.setdefault(clazz, {})
                     for attr in attrs:
-                        assert attr not in _visitors, (
-                            "Oops, class '%s' has visitor function for '%s' defined already."
-                            % (clazz.__name__, attr)
-                        )
+                        assert (
+                            attr not in _visitors
+                        ), f"Oops, class '{clazz.__name__}' has visitor function for '{attr}' defined already."
                         _visitors[attr] = method
             return None
 
         return wrapper
 
     @classmethod
-    def register(celf, clazzes):
+    def register(cls, clazzes):
         if type(clazzes) != tuple:
             clazzes = (clazzes,)
-        return celf._register([(clazzes, (None,))])
+        return cls._register([(clazzes, (None,))])
 
     @classmethod
-    def register_attr(celf, clazzes, attrs):
-        clazzes_attrs = []
+    def register_attr(cls, clazzes, attrs):
         if type(clazzes) != tuple:
             clazzes = (clazzes,)
         if type(attrs) == str:
             attrs = (attrs,)
-        for clazz in clazzes:
-            clazzes_attrs.append((clazz, attrs))
-        return celf._register(clazzes_attrs)
+        clazzes_attrs = [(clazz, attrs) for clazz in clazzes]
+        return cls._register(clazzes_attrs)
 
     @classmethod
-    def register_attrs(celf, clazzes_attrs):
-        return celf._register(clazzes_attrs)
+    def register_attrs(cls, clazzes_attrs):
+        return cls._register(clazzes_attrs)
 
     @classmethod
-    def _visitorsFor(celf, thing, _default={}):
+    def _visitorsFor(cls, thing, _default={}):
         typ = type(thing)
 
-        for celf in celf.mro():
+        for cls in cls.mro():
 
-            _visitors = getattr(celf, "_visitors", None)
+            _visitors = getattr(cls, "_visitors", None)
             if _visitors is None:
                 break
 
-            m = celf._visitors.get(typ, None)
+            m = cls._visitors.get(typ, None)
             if m is not None:
                 return m
 

@@ -70,7 +70,7 @@ class XMLWriter(object):
 
     def writecdata(self, string):
         """Writes text in a CDATA section."""
-        self._writeraw("<![CDATA[" + string + "]]>")
+        self._writeraw(f"<![CDATA[{string}]]>")
 
     def write8bit(self, data, strip=False):
         """Writes a bytes() sequence into the XML, escaping
@@ -104,20 +104,20 @@ class XMLWriter(object):
     def comment(self, data):
         data = escape(data)
         lines = data.split("\n")
-        self._writeraw("<!-- " + lines[0])
+        self._writeraw(f"<!-- {lines[0]}")
         for line in lines[1:]:
             self.newline()
-            self._writeraw("     " + line)
+            self._writeraw(f"     {line}")
         self._writeraw(" -->")
 
     def simpletag(self, _TAG_, *args, **kwargs):
         attrdata = self.stringifyattrs(*args, **kwargs)
-        data = "<%s%s/>" % (_TAG_, attrdata)
+        data = f"<{_TAG_}{attrdata}/>"
         self._writeraw(data)
 
     def begintag(self, _TAG_, *args, **kwargs):
         attrdata = self.stringifyattrs(*args, **kwargs)
-        data = "<%s%s>" % (_TAG_, attrdata)
+        data = f"<{_TAG_}{attrdata}>"
         self._writeraw(data)
         self.stack.append(_TAG_)
         self.indent()
@@ -126,7 +126,7 @@ class XMLWriter(object):
         assert self.stack and self.stack[-1] == _TAG_, "nonmatching endtag"
         del self.stack[-1]
         self.dedent()
-        data = "</%s>" % _TAG_
+        data = f"</{_TAG_}>"
         self._writeraw(data)
 
     def dumphex(self, data):
@@ -163,7 +163,7 @@ class XMLWriter(object):
         for attr, value in attributes:
             if not isinstance(value, (bytes, str)):
                 value = str(value)
-            data = data + ' %s="%s"' % (attr, escapeattr(value))
+            data = f'{data} {attr}="{escapeattr(value)}"'
         return data
 
 
@@ -187,10 +187,7 @@ def escape8bit(data):
 
     def escapechar(c):
         n = ord(c)
-        if 32 <= n <= 127 and c not in "<&>":
-            return c
-        else:
-            return "&#" + repr(n) + ";"
+        return c if 32 <= n <= 127 and c not in "<&>" else f"&#{repr(n)};"
 
     return strjoin(map(escapechar, data.decode("latin-1")))
 

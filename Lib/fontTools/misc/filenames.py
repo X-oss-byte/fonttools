@@ -104,7 +104,7 @@ def userNameToFileName(userName, existing=[], prefix="", suffix=""):
     # replace an initial period with an _
     # if no prefix is to be added
     if not prefix and userName[0] == ".":
-        userName = "_" + userName[1:]
+        userName = f"_{userName[1:]}"
     # filter the user name
     filteredUserName = []
     for character in userName:
@@ -123,7 +123,7 @@ def userNameToFileName(userName, existing=[], prefix="", suffix=""):
     parts = []
     for part in userName.split("."):
         if part.lower() in reservedFileNames:
-            part = "_" + part
+            part = f"_{part}"
         parts.append(part)
     userName = ".".join(parts)
     # test for clash

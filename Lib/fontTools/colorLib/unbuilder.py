@@ -3,9 +3,7 @@ from .table_builder import TableUnbuilder
 
 
 def unbuildColrV1(layerList, baseGlyphList):
-    layers = []
-    if layerList:
-        layers = layerList.Paint
+    layers = layerList.Paint if layerList else []
     unbuilder = LayerListUnbuilder(layers)
     return {
         rec.BaseGlyph: unbuilder.unbuildPaint(rec.Paint)

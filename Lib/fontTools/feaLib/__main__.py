@@ -59,7 +59,7 @@ def main(args=None):
     configLogger(level=levels[min(len(levels) - 1, options.verbose)])
 
     output_font = options.output_font or makeOutputFileName(options.input_font)
-    log.info("Compiling features to '%s'" % (output_font))
+    log.info(f"Compiling features to '{output_font}'")
 
     font = TTFont(options.input_font)
     try:

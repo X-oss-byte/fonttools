@@ -94,11 +94,10 @@ def _calcCubicArcLengthCRecurse(mult, p0, p1, p2, p3):
     box = abs(p0 - p1) + abs(p1 - p2) + abs(p2 - p3)
     if arch * mult >= box:
         return (arch + box) * 0.5
-    else:
-        one, two = _split_cubic_into_two(p0, p1, p2, p3)
-        return _calcCubicArcLengthCRecurse(mult, *one) + _calcCubicArcLengthCRecurse(
-            mult, *two
-        )
+    one, two = _split_cubic_into_two(p0, p1, p2, p3)
+    return _calcCubicArcLengthCRecurse(mult, *one) + _calcCubicArcLengthCRecurse(
+        mult, *two
+    )
 
 
 @cython.returns(cython.double)
@@ -230,8 +229,12 @@ def calcQuadraticArcLengthC(pt1, pt2, pt3):
         return (a * a + b * b) / (a + b)
     x0 = _dot(d, d0) / origDist
     x1 = _dot(d, d1) / origDist
-    Len = abs(2 * (_intSecAtan(x1) - _intSecAtan(x0)) * origDist / (scale * (x1 - x0)))
-    return Len
+    return abs(
+        2
+        * (_intSecAtan(x1) - _intSecAtan(x0))
+        * origDist
+        / (scale * (x1 - x0))
+    )
 
 
 def approximateQuadraticArcLength(pt1, pt2, pt3):
@@ -543,10 +546,10 @@ def splitQuadratic(pt1, pt2, pt3, where, isHorizontal):
     solutions = solveQuadratic(
         a[isHorizontal], b[isHorizontal], c[isHorizontal] - where
     )
-    solutions = sorted(t for t in solutions if 0 <= t < 1)
-    if not solutions:
+    if solutions := sorted(t for t in solutions if 0 <= t < 1):
+        return _splitQuadraticAtT(a, b, c, *solutions)
+    else:
         return [(pt1, pt2, pt3)]
-    return _splitQuadraticAtT(a, b, c, *solutions)
 
 
 def splitCubic(pt1, pt2, pt3, pt4, where, isHorizontal):
@@ -580,10 +583,10 @@ def splitCubic(pt1, pt2, pt3, pt4, where, isHorizontal):
     solutions = solveCubic(
         a[isHorizontal], b[isHorizontal], c[isHorizontal], d[isHorizontal] - where
     )
-    solutions = sorted(t for t in solutions if 0 <= t < 1)
-    if not solutions:
+    if solutions := sorted(t for t in solutions if 0 <= t < 1):
+        return _splitCubicAtT(a, b, c, d, *solutions)
+    else:
         return [(pt1, pt2, pt3, pt4)]
-    return _splitCubicAtT(a, b, c, d, *solutions)
 
 
 def splitQuadraticAtT(pt1, pt2, pt3, *ts):
@@ -820,12 +823,7 @@ def solveQuadratic(a, b, c, sqrt=sqrt):
         be sorted nor to contain unique values!
     """
     if abs(a) < epsilon:
-        if abs(b) < epsilon:
-            # We have a non-equation; therefore, we have no valid solution
-            roots = []
-        else:
-            # We have a linear equation with 1 root.
-            roots = [-c / b]
+        roots = [] if abs(b) < epsilon else [-c / b]
     else:
         # We have a true quadratic equation.  Apply the quadratic formula to find two roots.
         DD = b * b - 4.0 * a * c
@@ -1140,8 +1138,7 @@ def _line_t_of_pt(s, e, pt):
 
 def _both_points_are_on_same_side_of_origin(a, b, origin):
     xDiff = (a[0] - origin[0]) * (b[0] - origin[0])
-    yDiff = (a[1] - origin[1]) * (b[1] - origin[1])
-    return not (xDiff <= 0.0 and yDiff <= 0.0)
+    return xDiff > 0.0 or (a[1] - origin[1]) * (b[1] - origin[1]) > 0.0
 
 
 def lineLineIntersections(s1, e1, s2, e2):
@@ -1456,7 +1453,7 @@ def _segmentrepr(obj):
     except TypeError:
         return "%g" % obj
     else:
-        return "(%s)" % ", ".join(_segmentrepr(x) for x in it)
+        return f'({", ".join(_segmentrepr(x) for x in it)})'
 
 
 def printSegments(segments):

@@ -164,14 +164,12 @@ def merge_curves(curves, start, n):
 )
 def add_implicit_on_curves(p):
     q = list(p)
-    count = 0
     num_offcurves = len(p) - 2
-    for i in range(1, num_offcurves):
+    for count, i in enumerate(range(1, num_offcurves)):
         off1 = p[i]
         off2 = p[i + 1]
         on = off1 + (off2 - off1) * 0.5
         q.insert(i + 1 + count, on)
-        count += 1
     return q
 
 
@@ -222,10 +220,9 @@ def quadratic_to_curves(
     cost = 1
     for p in quads:
         assert q[-1] == p[0]
-        for i in range(len(p) - 2):
+        for _ in range(len(p) - 2):
             cost += 1
-            costs.append(cost)
-            costs.append(cost)
+            costs.extend((cost, cost))
         qq = add_implicit_on_curves(p)[1:]
         costs.pop()
         q.extend(qq)
@@ -379,8 +376,7 @@ def spline_to_curves(q, costs, tolerance=0.5, all_cubic=False):
         if is_cubic:
             curves.append(merge_curves(elevated_quadratics, j, i - j)[0])
         else:
-            for k in range(j, i):
-                curves.append(q[k * 2 : k * 2 + 3])
+            curves.extend(q[k * 2 : k * 2 + 3] for k in range(j, i))
         j = i
 
     return curves

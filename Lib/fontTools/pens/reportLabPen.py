@@ -54,11 +54,7 @@ if __name__ == "__main__":
 
     path = sys.argv[1]
     glyphName = sys.argv[2]
-    if len(sys.argv) > 3:
-        imageFile = sys.argv[3]
-    else:
-        imageFile = "%s.png" % glyphName
-
+    imageFile = sys.argv[3] if len(sys.argv) > 3 else f"{glyphName}.png"
     font = TTFont(path)  # it would work just as well with fontTools.t1Lib.T1Font
     gs = font.getGlyphSet()
     pen = ReportLabPen(gs, Path(fillColor=colors.red, strokeWidth=5))

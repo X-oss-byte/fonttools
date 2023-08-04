@@ -42,7 +42,7 @@ __all__ = [
 # ElementTree allows to find namespace-prefixed elements, but not attributes
 # so we have to do it ourselves for 'xml:lang'
 XML_NS = "{http://www.w3.org/XML/1998/namespace}"
-XML_LANG = XML_NS + "lang"
+XML_LANG = f"{XML_NS}lang"
 
 
 def posix(path):
@@ -50,10 +50,10 @@ def posix(path):
     new_path = posixpath.join(*path.split(os.path.sep))
     if path.startswith("/"):
         # The above transformation loses absolute paths
-        new_path = "/" + new_path
+        new_path = f"/{new_path}"
     elif path.startswith(r"\\"):
         # The above transformation loses leading slashes of UNC path mounts
-        new_path = "//" + new_path
+        new_path = f"//{new_path}"
     return new_path
 
 
@@ -337,12 +337,12 @@ class SourceDescriptor(SimpleDescriptor):
 
         .. versionadded:: 5.0
         """
-        result: AnisotropicLocationDict = {}
-        for axis in doc.axes:
-            if axis.name in self.designLocation:
-                result[axis.name] = self.designLocation[axis.name]
-            else:
-                result[axis.name] = axis.map_forward(axis.default)
+        result: AnisotropicLocationDict = {
+            axis.name: self.designLocation[axis.name]
+            if axis.name in self.designLocation
+            else axis.map_forward(axis.default)
+            for axis in doc.axes
+        }
         return result
 
 
@@ -850,10 +850,7 @@ def tagForAxisName(name):
     }
     if name.lower() in names:
         return names[name.lower()]
-    if len(name) < 4:
-        tag = name + "*" * (4 - len(name))
-    else:
-        tag = name[:4]
+    tag = name + "*" * (4 - len(name)) if len(name) < 4 else name[:4]
     return tag, dict(en=name)
 
 
@@ -1012,9 +1009,7 @@ class AxisDescriptor(AbstractAxisDescriptor):
         """Maps value from axis mapping's input (user) to output (design)."""
         from fontTools.varLib.models import piecewiseLinearMap
 
-        if not self.map:
-            return v
-        return piecewiseLinearMap(v, {k: v for k, v in self.map})
+        return v if not self.map else piecewiseLinearMap(v, dict(self.map))
 
     def map_backward(self, v):
         """Maps value from axis mapping's output (design) to input (user)."""
@@ -1022,9 +1017,7 @@ class AxisDescriptor(AbstractAxisDescriptor):
 
         if isinstance(v, tuple):
             v = v[0]
-        if not self.map:
-            return v
-        return piecewiseLinearMap(v, {v: k for k, v in self.map})
+        return piecewiseLinearMap(v, {v: k for k, v in self.map}) if self.map else v
 
 
 class DiscreteAxisDescriptor(AbstractAxisDescriptor):
@@ -1196,9 +1189,7 @@ class AxisLabelDescriptor(SimpleDescriptor):
         """
         if self.linkedUserValue is not None:
             return 3
-        if self.userMinimum is not None or self.userMaximum is not None:
-            return 2
-        return 1
+        return 2 if self.userMinimum is not None or self.userMaximum is not None else 1
 
     @property
     def defaultName(self) -> str:
@@ -1491,11 +1482,9 @@ class BaseDocWriter(object):
                 for instance in self.documentObject.instances
             )
         ):
-            if minVersion < (5, 0):
-                minVersion = (5, 0)
+            minVersion = max(minVersion, (5, 0))
         if self.documentObject.axisMappings:
-            if minVersion < (5, 1):
-                minVersion = (5, 1)
+            minVersion = max(minVersion, (5, 1))
         return minVersion
 
     def _makeLocationElement(self, locationObject, name=None):
@@ -1520,9 +1509,7 @@ class BaseDocWriter(object):
         return locElement, validatedLocation
 
     def intOrFloat(self, num):
-        if int(num) == num:
-            return "%d" % num
-        return ("%f" % num).rstrip("0").rstrip(".")
+        return "%d" % num if int(num) == num else ("%f" % num).rstrip("0").rstrip(".")
 
     def _addRule(self, ruleObject):
         # if none of the conditions have minimum or maximum values, do not add the rule.
@@ -1684,8 +1671,7 @@ class BaseDocWriter(object):
             instanceElement.attrib["stylename"] = instanceObject.styleName
         # add localisations
         if instanceObject.localisedStyleName:
-            languageCodes = list(instanceObject.localisedStyleName.keys())
-            languageCodes.sort()
+            languageCodes = sorted(instanceObject.localisedStyleName.keys())
             for code in languageCodes:
                 if code == "en":
                     continue  # already stored in the element attribute
@@ -1694,8 +1680,7 @@ class BaseDocWriter(object):
                 localisedStyleNameElement.text = instanceObject.getStyleName(code)
                 instanceElement.append(localisedStyleNameElement)
         if instanceObject.localisedFamilyName:
-            languageCodes = list(instanceObject.localisedFamilyName.keys())
-            languageCodes.sort()
+            languageCodes = sorted(instanceObject.localisedFamilyName.keys())
             for code in languageCodes:
                 if code == "en":
                     continue  # already stored in the element attribute
@@ -1704,8 +1689,7 @@ class BaseDocWriter(object):
                 localisedFamilyNameElement.text = instanceObject.getFamilyName(code)
                 instanceElement.append(localisedFamilyNameElement)
         if instanceObject.localisedStyleMapStyleName:
-            languageCodes = list(instanceObject.localisedStyleMapStyleName.keys())
-            languageCodes.sort()
+            languageCodes = sorted(instanceObject.localisedStyleMapStyleName.keys())
             for code in languageCodes:
                 if code == "en":
                     continue
@@ -1716,8 +1700,7 @@ class BaseDocWriter(object):
                 )
                 instanceElement.append(localisedStyleMapStyleNameElement)
         if instanceObject.localisedStyleMapFamilyName:
-            languageCodes = list(instanceObject.localisedStyleMapFamilyName.keys())
-            languageCodes.sort()
+            languageCodes = sorted(instanceObject.localisedStyleMapFamilyName.keys())
             for code in languageCodes:
                 if code == "en":
                     continue
@@ -1735,14 +1718,11 @@ class BaseDocWriter(object):
                     designLocation=instanceObject.designLocation,
                     userLocation=instanceObject.userLocation,
                 )
-        else:
-            # Pre-version 5.0 code was validating and filling in the location
-            # dict while writing it out, as preserved below.
-            if instanceObject.location is not None:
-                locationElement, instanceObject.location = self._makeLocationElement(
-                    instanceObject.location
-                )
-                instanceElement.append(locationElement)
+        elif instanceObject.location is not None:
+            locationElement, instanceObject.location = self._makeLocationElement(
+                instanceObject.location
+            )
+            instanceElement.append(locationElement)
         if instanceObject.filename is not None:
             instanceElement.attrib["filename"] = instanceObject.filename
         if instanceObject.postScriptFontName is not None:
@@ -1793,8 +1773,7 @@ class BaseDocWriter(object):
         if sourceObject.layerName is not None:
             sourceElement.attrib["layer"] = sourceObject.layerName
         if sourceObject.localisedFamilyName:
-            languageCodes = list(sourceObject.localisedFamilyName.keys())
-            languageCodes.sort()
+            languageCodes = sorted(sourceObject.localisedFamilyName.keys())
             for code in languageCodes:
                 if code == "en":
                     continue  # already stored in the element attribute
@@ -1984,12 +1963,10 @@ class BaseDocReader(LogMixin):
         for ruleElement in self.root.findall(".rules/rule"):
             ruleObject = self.ruleDescriptorClass()
             ruleName = ruleObject.name = ruleElement.attrib.get("name")
-            # read any stray conditions outside a condition set
-            externalConditions = self._readConditionElements(
+            if externalConditions := self._readConditionElements(
                 ruleElement,
                 ruleName,
-            )
-            if externalConditions:
+            ):
                 ruleObject.conditionSets.append(externalConditions)
                 self.log.info(
                     "Found stray rule conditions outside a conditionset. "
@@ -2013,25 +1990,16 @@ class BaseDocReader(LogMixin):
     def _readConditionElements(self, parentElement, ruleName=None):
         cds = []
         for conditionElement in parentElement.findall(".condition"):
-            cd = {}
             cdMin = conditionElement.attrib.get("minimum")
-            if cdMin is not None:
-                cd["minimum"] = float(cdMin)
-            else:
-                # will allow these to be None, assume axis.minimum
-                cd["minimum"] = None
+            cd = {"minimum": float(cdMin) if cdMin is not None else None}
             cdMax = conditionElement.attrib.get("maximum")
-            if cdMax is not None:
-                cd["maximum"] = float(cdMax)
-            else:
-                # will allow these to be None, assume axis.maximum
-                cd["maximum"] = None
+            cd["maximum"] = float(cdMax) if cdMax is not None else None
             cd["name"] = conditionElement.attrib.get("name")
             # # test for things
             if cd.get("minimum") is None and cd.get("maximum") is None:
                 raise DesignSpaceDocumentError(
                     "condition missing required minimum or maximum in rule"
-                    + (" '%s'" % ruleName if ruleName is not None else "")
+                    + (f" '{ruleName}'" if ruleName is not None else "")
                 )
             cds.append(cd)
         return cds
@@ -2114,8 +2082,7 @@ class BaseDocReader(LogMixin):
             "oldersibling",
             "linkeduservalue",
         }
-        unknown_attrs = set(element.attrib) - xml_attrs
-        if unknown_attrs:
+        if unknown_attrs := set(element.attrib) - xml_attrs:
             raise DesignSpaceDocumentError(
                 f"label element contains unknown attributes: {', '.join(unknown_attrs)}"
             )
@@ -2135,8 +2102,8 @@ class BaseDocReader(LogMixin):
         maximum = float(maximumStr) if maximumStr is not None else None
         linkedValueStr = element.get("linkeduservalue")
         linkedValue = float(linkedValueStr) if linkedValueStr is not None else None
-        elidable = True if element.get("elidable") == "true" else False
-        olderSibling = True if element.get("oldersibling") == "true" else False
+        elidable = element.get("elidable") == "true"
+        olderSibling = element.get("oldersibling") == "true"
         labelNames = {
             lang: label_name.text or ""
             for label_name in element.findall("labelname")
@@ -2162,8 +2129,7 @@ class BaseDocReader(LogMixin):
 
         xml_attrs = {"name", "elidable", "oldersibling"}
         for labelElement in self.root.findall(".labels/label"):
-            unknown_attrs = set(labelElement.attrib) - xml_attrs
-            if unknown_attrs:
+            if unknown_attrs := set(labelElement.attrib) - xml_attrs:
                 raise DesignSpaceDocumentError(
                     f"Label element contains unknown attributes: {', '.join(unknown_attrs)}"
                 )
@@ -2178,8 +2144,8 @@ class BaseDocReader(LogMixin):
                 raise DesignSpaceDocumentError(
                     f'<label> element "{name}" must only have user locations (using uservalue="").'
                 )
-            elidable = True if labelElement.get("elidable") == "true" else False
-            olderSibling = True if labelElement.get("oldersibling") == "true" else False
+            elidable = labelElement.get("elidable") == "true"
+            olderSibling = labelElement.get("oldersibling") == "true"
             labelNames = {
                 lang: label_name.text or ""
                 for label_name in labelElement.findall("labelname")
@@ -2203,8 +2169,7 @@ class BaseDocReader(LogMixin):
 
         xml_attrs = {"name", "filename"}
         for variableFontElement in self.root.findall(".variable-fonts/variable-font"):
-            unknown_attrs = set(variableFontElement.attrib) - xml_attrs
-            if unknown_attrs:
+            if unknown_attrs := set(variableFontElement.attrib) - xml_attrs:
                 raise DesignSpaceDocumentError(
                     f"variable-font element contains unknown attributes: {', '.join(unknown_attrs)}"
                 )
@@ -2222,10 +2187,10 @@ class BaseDocReader(LogMixin):
                 raise DesignSpaceDocumentError(
                     "variable-font element must contain an axis-subsets element."
                 )
-            axisSubsets = []
-            for axisSubset in axisSubsetsElement.iterfind(".axis-subset"):
-                axisSubsets.append(self.readAxisSubset(axisSubset))
-
+            axisSubsets = [
+                self.readAxisSubset(axisSubset)
+                for axisSubset in axisSubsetsElement.iterfind(".axis-subset")
+            ]
             lib = None
             libElement = variableFontElement.find(".lib")
             if libElement is not None:
@@ -2242,8 +2207,7 @@ class BaseDocReader(LogMixin):
     def readAxisSubset(self, element: ET.Element):
         if "uservalue" in element.attrib:
             xml_attrs = {"name", "uservalue"}
-            unknown_attrs = set(element.attrib) - xml_attrs
-            if unknown_attrs:
+            if unknown_attrs := set(element.attrib) - xml_attrs:
                 raise DesignSpaceDocumentError(
                     f"axis-subset element contains unknown attributes: {', '.join(unknown_attrs)}"
                 )
@@ -2263,8 +2227,7 @@ class BaseDocReader(LogMixin):
             return self.valueAxisSubsetDescriptorClass(name=name, userValue=userValue)
         else:
             xml_attrs = {"name", "userminimum", "userdefault", "usermaximum"}
-            unknown_attrs = set(element.attrib) - xml_attrs
-            if unknown_attrs:
+            if unknown_attrs := set(element.attrib) - xml_attrs:
                 raise DesignSpaceDocumentError(
                     f"axis-subset element contains unknown attributes: {', '.join(unknown_attrs)}"
                 )
@@ -2544,9 +2507,7 @@ class BaseDocReader(LogMixin):
                 unicodes = [int(u, 16) for u in unicodes.split(" ")]
                 glyphData["unicodes"] = unicodes
             except ValueError:
-                raise DesignSpaceDocumentError(
-                    "unicode values %s are not integers" % unicodes
-                )
+                raise DesignSpaceDocumentError(f"unicode values {unicodes} are not integers")
 
         for noteElement in glyphElement.findall(".note"):
             glyphData["note"] = noteElement.text
@@ -2702,14 +2663,8 @@ class DesignSpaceDocument(LogMixin, AsDictMixin):
         This attribute is updated by the :meth:`findDefault`
         """
 
-        if readerClass is not None:
-            self.readerClass = readerClass
-        else:
-            self.readerClass = BaseDocReader
-        if writerClass is not None:
-            self.writerClass = writerClass
-        else:
-            self.writerClass = BaseDocWriter
+        self.readerClass = readerClass if readerClass is not None else BaseDocReader
+        self.writerClass = writerClass if writerClass is not None else BaseDocWriter
 
     @classmethod
     def fromfile(cls, path, readerClass=None, writerClass=None):
@@ -2739,7 +2694,7 @@ class DesignSpaceDocument(LogMixin, AsDictMixin):
             encoding = "UTF-8"
             xml_declaration = True
         else:
-            raise ValueError("unsupported encoding: '%s'" % encoding)
+            raise ValueError(f"unsupported encoding: '{encoding}'")
         writer = self.writerClass(f, self)
         writer.write(encoding=encoding, xml_declaration=xml_declaration)
         return f.getvalue()
@@ -2979,10 +2934,7 @@ class DesignSpaceDocument(LogMixin, AsDictMixin):
 
     def getAxisOrder(self):
         """Return a list of axis names, in the same order as defined in the document."""
-        names = []
-        for axisDescriptor in self.axes:
-            names.append(axisDescriptor.name)
-        return names
+        return [axisDescriptor.name for axisDescriptor in self.axes]
 
     def getAxis(self, name: str) -> AxisDescriptor | DiscreteAxisDescriptor | None:
         """Return the axis with the given ``name``, or ``None`` if no such axis exists."""
@@ -2998,10 +2950,9 @@ class DesignSpaceDocument(LogMixin, AsDictMixin):
 
         .. versionadded:: 5.0
         """
-        for label in self.locationLabels:
-            if label.name == name:
-                return label
-        return None
+        return next(
+            (label for label in self.locationLabels if label.name == name), None
+        )
 
     def map_forward(self, userLocation: SimpleLocationDict) -> SimpleLocationDict:
         """Map a user location to a design location.
@@ -3186,8 +3137,7 @@ class DesignSpaceDocument(LogMixin, AsDictMixin):
             else:
                 if source.path is None:
                     raise DesignSpaceDocumentError(
-                        "Designspace source '%s' has no 'path' attribute"
-                        % (source.name or "<Unknown>")
+                        f"""Designspace source '{source.name or "<Unknown>"}' has no 'path' attribute"""
                     )
                 source.font = opener(source.path, **kwargs)
                 loaded[source.path] = source.font
@@ -3243,9 +3193,9 @@ class DesignSpaceDocument(LogMixin, AsDictMixin):
         for values in valueCombinations:
             basename = None
             if self.filename is not None:
-                basename = os.path.splitext(self.filename)[0] + "-VF"
+                basename = f"{os.path.splitext(self.filename)[0]}-VF"
             if self.path is not None:
-                basename = os.path.splitext(os.path.basename(self.path))[0] + "-VF"
+                basename = f"{os.path.splitext(os.path.basename(self.path))[0]}-VF"
             if basename is None:
                 basename = "VF"
             axisNames = "".join(

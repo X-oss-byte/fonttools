@@ -103,14 +103,12 @@ def buildLookup(subtables, flags=0, markFilterSet=None):
         return None
     assert all(
         t.LookupType == subtables[0].LookupType for t in subtables
-    ), "all subtables must have the same LookupType; got %s" % repr(
-        [t.LookupType for t in subtables]
-    )
+    ), f"all subtables must have the same LookupType; got {repr([t.LookupType for t in subtables])}"
     self = ot.Lookup()
     self.LookupType = subtables[0].LookupType
-    self.LookupFlag = flags
     self.SubTable = subtables
     self.SubTableCount = len(self.SubTable)
+    self.LookupFlag = flags
     if markFilterSet is not None:
         self.LookupFlag |= LOOKUP_FLAG_USE_MARK_FILTERING_SET
         assert isinstance(markFilterSet, int), markFilterSet
@@ -204,8 +202,7 @@ class LookupBuilder(object):
                 substitutions.append({})
             else:
                 substitutions[-1][key] = mapping[key]
-        subtables = [klass(s) for s in substitutions]
-        return subtables
+        return [klass(s) for s in substitutions]
 
     def add_subtable_break(self, location):
         """Add an explicit subtable break.
@@ -288,12 +285,7 @@ class ChainContextualRuleset:
 
     @property
     def hasPrefixOrSuffix(self):
-        # Do we have any prefixes/suffixes? If this is False for all
-        # rulesets, we can express the whole lookup as GPOS5/GSUB7.
-        for rule in self.rules:
-            if len(rule.prefix) > 0 or len(rule.suffix) > 0:
-                return True
-        return False
+        return any(len(rule.prefix) > 0 or len(rule.suffix) > 0 for rule in self.rules)
 
     @property
     def hasAnyGlyphClasses(self):
@@ -309,13 +301,11 @@ class ChainContextualRuleset:
         PREFIX, GLYPHS, SUFFIX = 0, 1, 2
         classDefBuilders = []
         for ix in [PREFIX, GLYPHS, SUFFIX]:
-            context = []
-            for r in self.rules:
-                context.append(r[ix])
-            classes = self._classBuilderForContext(context)
-            if not classes:
+            context = [r[ix] for r in self.rules]
+            if classes := self._classBuilderForContext(context):
+                classDefBuilders.append(classes)
+            else:
                 return None
-            classDefBuilders.append(classes)
         return classDefBuilders
 
     def _classBuilderForContext(self, context):
@@ -396,9 +386,7 @@ class ChainContextualBuilder(LookupBuilder):
             for rule in ruleset.rules:
                 candidates[3].append(self.buildFormat3Subtable(rule, chaining))
 
-            # Can we express the whole ruleset as a format 2 subtable?
-            classdefs = ruleset.format2ClassDefs()
-            if classdefs:
+            if classdefs := ruleset.format2ClassDefs():
                 candidates[2] = [
                     self.buildFormat2Subtable(ruleset, classdefs, chaining)
                 ]
@@ -469,7 +457,9 @@ class ChainContextualBuilder(LookupBuilder):
 
         setattr(st, self.ruleSetAttr_(format=1, chaining=chaining), ruleSets)
         setattr(
-            st, self.ruleSetAttr_(format=1, chaining=chaining) + "Count", len(ruleSets)
+            st,
+            f"{self.ruleSetAttr_(format=1, chaining=chaining)}Count",
+            len(ruleSets),
         )
 
         return st
@@ -541,7 +531,9 @@ class ChainContextualBuilder(LookupBuilder):
             )
         setattr(st, self.ruleSetAttr_(format=2, chaining=chaining), classSets)
         setattr(
-            st, self.ruleSetAttr_(format=2, chaining=chaining) + "Count", len(classSets)
+            st,
+            f"{self.ruleSetAttr_(format=2, chaining=chaining)}Count",
+            len(classSets),
         )
         st.Coverage = buildCoverage(coverage, self.glyphMap)
         return st
@@ -592,7 +584,7 @@ class ChainContextualBuilder(LookupBuilder):
     def newSubtable_(self, chaining=True):
         subtablename = f"Context{self.subtable_type}"
         if chaining:
-            subtablename = "Chain" + subtablename
+            subtablename = f"Chain{subtablename}"
         st = getattr(ot, subtablename)()  # ot.ChainContextPos()/ot.ChainSubst()/etc.
         setattr(st, f"{self.subtable_type}Count", 0)
         setattr(st, f"{self.subtable_type}LookupRecord", [])
@@ -615,9 +607,9 @@ class ChainContextualBuilder(LookupBuilder):
             formatType = "Class"
         else:
             raise AssertionError(formatType)
-        subtablename = f"{self.subtable_type[0:3]}{formatType}Set"  # Sub, not Subst.
+        subtablename = f"{self.subtable_type[:3]}{formatType}Set"
         if chaining:
-            subtablename = "Chain" + subtablename
+            subtablename = f"Chain{subtablename}"
         return subtablename
 
     def ruleAttr_(self, format=1, chaining=True):
@@ -627,9 +619,9 @@ class ChainContextualBuilder(LookupBuilder):
             formatType = "Class"
         else:
             raise AssertionError(formatType)
-        subtablename = f"{self.subtable_type[0:3]}{formatType}Rule"  # Sub, not Subst.
+        subtablename = f"{self.subtable_type[:3]}{formatType}Rule"
         if chaining:
-            subtablename = "Chain" + subtablename
+            subtablename = f"Chain{subtablename}"
         return subtablename
 
     def newRuleSet_(self, format=1, chaining=True):
@@ -650,19 +642,14 @@ class ChainContextualBuilder(LookupBuilder):
         self, st, subtable_name, count_name, existing=None, index=None, chaining=False
     ):
         if chaining:
-            subtable_name = "Chain" + subtable_name
-            count_name = "Chain" + count_name
+            subtable_name = f"Chain{subtable_name}"
+            count_name = f"Chain{count_name}"
 
         if not hasattr(st, count_name):
             setattr(st, count_name, 0)
             setattr(st, subtable_name, [])
 
-        if existing:
-            new_subtable = existing
-        else:
-            # Create a new, empty subtable from otTables
-            new_subtable = getattr(ot, subtable_name)()
-
+        new_subtable = existing if existing else getattr(ot, subtable_name)()
         setattr(st, count_name, getattr(st, count_name) + 1)
 
         if index:
@@ -965,9 +952,7 @@ class MarkBasePosBuilder(LookupBuilder):
         )
 
     def inferGlyphClasses(self):
-        result = {glyph: 1 for glyph in self.bases}
-        result.update({glyph: 3 for glyph in self.marks})
-        return result
+        return {glyph: 1 for glyph in self.bases} | {glyph: 3 for glyph in self.marks}
 
     def build(self):
         """Build the lookup.
@@ -980,18 +965,14 @@ class MarkBasePosBuilder(LookupBuilder):
         marks = {}
         for mark, (mc, anchor) in self.marks.items():
             if mc not in markClasses:
-                raise ValueError(
-                    "Mark class %s not found for mark glyph %s" % (mc, mark)
-                )
+                raise ValueError(f"Mark class {mc} not found for mark glyph {mark}")
             marks[mark] = (markClasses[mc], anchor)
         bases = {}
         for glyph, anchors in self.bases.items():
             bases[glyph] = {}
             for mc, anchor in anchors.items():
                 if mc not in markClasses:
-                    raise ValueError(
-                        "Mark class %s not found for base glyph %s" % (mc, glyph)
-                    )
+                    raise ValueError(f"Mark class {mc} not found for base glyph {glyph}")
                 bases[glyph][markClasses[mc]] = anchor
         subtables = buildMarkBasePos(marks, bases, self.glyphMap)
         return self.buildLookup_(subtables)
@@ -1041,9 +1022,9 @@ class MarkLigPosBuilder(LookupBuilder):
         )
 
     def inferGlyphClasses(self):
-        result = {glyph: 2 for glyph in self.ligatures}
-        result.update({glyph: 3 for glyph in self.marks})
-        return result
+        return {glyph: 2 for glyph in self.ligatures} | {
+            glyph: 3 for glyph in self.marks
+        }
 
     def build(self):
         """Build the lookup.
@@ -1056,11 +1037,10 @@ class MarkLigPosBuilder(LookupBuilder):
         marks = {
             mark: (markClasses[mc], anchor) for mark, (mc, anchor) in self.marks.items()
         }
-        ligs = {}
-        for lig, components in self.ligatures.items():
-            ligs[lig] = []
-            for c in components:
-                ligs[lig].append({markClasses[mc]: a for mc, a in c.items()})
+        ligs = {
+            lig: [{markClasses[mc]: a for mc, a in c.items()} for c in components]
+            for lig, components in self.ligatures.items()
+        }
         subtables = buildMarkLigPos(marks, ligs, self.glyphMap)
         return self.buildLookup_(subtables)
 
@@ -1105,9 +1085,9 @@ class MarkMarkPosBuilder(LookupBuilder):
         )
 
     def inferGlyphClasses(self):
-        result = {glyph: 3 for glyph in self.baseMarks}
-        result.update({glyph: 3 for glyph in self.marks})
-        return result
+        return {glyph: 3 for glyph in self.baseMarks} | {
+            glyph: 3 for glyph in self.marks
+        }
 
     def build(self):
         """Build the lookup.
@@ -1234,7 +1214,7 @@ class SingleSubstBuilder(LookupBuilder):
         return self.buildLookup_(subtables)
 
     def getAlternateGlyphs(self):
-        return {glyph: set([repl]) for glyph, repl in self.mapping.items()}
+        return {glyph: {repl} for glyph, repl in self.mapping.items()}
 
     def add_subtable_break(self, location):
         self.mapping[(self.SUBTABLE_BREAK_, location)] = self.SUBTABLE_BREAK_
@@ -1458,8 +1438,7 @@ class SinglePosBuilder(LookupBuilder):
         if not self.can_add(glyph, otValueRecord):
             otherLoc = self.locations[glyph]
             raise OpenTypeLibError(
-                'Already defined different position for glyph "%s" at %s'
-                % (glyph, otherLoc),
+                f'Already defined different position for glyph "{glyph}" at {otherLoc}',
                 location,
             )
         if otValueRecord:
@@ -1832,9 +1811,10 @@ def buildLigatureArray(ligs, numMarkClasses, glyphMap):
     self = ot.LigatureArray()
     self.LigatureAttach = []
     for lig in sorted(ligs, key=glyphMap.__getitem__):
-        anchors = []
-        for component in ligs[lig]:
-            anchors.append([component.get(mc) for mc in range(numMarkClasses)])
+        anchors = [
+            [component.get(mc) for mc in range(numMarkClasses)]
+            for component in ligs[lig]
+        ]
         self.LigatureAttach.append(buildLigatureAttach(anchors))
     self.LigatureCount = len(self.LigatureAttach)
     return self
@@ -1959,7 +1939,7 @@ def buildMarkBasePosSubtable(marks, bases, glyphMap):
     self.Format = 1
     self.MarkCoverage = buildCoverage(marks, glyphMap)
     self.MarkArray = buildMarkArray(marks, glyphMap)
-    self.ClassCount = max([mc for mc, _ in marks.values()]) + 1
+    self.ClassCount = max(mc for mc, _ in marks.values()) + 1
     self.BaseCoverage = buildCoverage(bases, glyphMap)
     self.BaseArray = buildBaseArray(bases, self.ClassCount, glyphMap)
     return self
@@ -2042,7 +2022,7 @@ def buildMarkLigPosSubtable(marks, ligs, glyphMap):
     self.Format = 1
     self.MarkCoverage = buildCoverage(marks, glyphMap)
     self.MarkArray = buildMarkArray(marks, glyphMap)
-    self.ClassCount = max([mc for mc, _ in marks.values()]) + 1
+    self.ClassCount = max(mc for mc, _ in marks.values()) + 1
     self.LigatureCoverage = buildCoverage(ligs, glyphMap)
     self.LigatureArray = buildLigatureArray(ligs, self.ClassCount, glyphMap)
     return self
@@ -2315,12 +2295,12 @@ def buildSinglePos(mapping, glyphMap):
     # In the remaining ValueRecords, look for those whose valueFormat
     # (the set of used properties) is shared between multiple records.
     # These will get encoded in format 2.
-    for valueFormat, keys in masks.items():
+    for keys in masks.values():
         f2 = [k for k in keys if k not in handled]
         if len(f2) > 1:
             format2Mapping = {}
             for k in f2:
-                format2Mapping.update((g, values[k]) for g in coverages[k])
+                format2Mapping |= ((g, values[k]) for g in coverages[k])
             result.append(buildSinglePosSubtable(format2Mapping, glyphMap))
             handled.update(f2)
 
@@ -2385,10 +2365,7 @@ def buildSinglePosSubtable(values, glyphMap):
     ]
     if all(v == valueRecords[0] for v in valueRecords):
         self.Format = 1
-        if self.ValueFormat != 0:
-            self.Value = valueRecords[0]
-        else:
-            self.Value = None
+        self.Value = valueRecords[0] if self.ValueFormat != 0 else None
     else:
         self.Format = 2
         self.Value = valueRecords
@@ -2431,14 +2408,10 @@ def _makeDeviceTuple(device):
 
 
 def _getSinglePosValueSize(valueKey):
-    # Returns how many ushorts this valueKey (short form of ValueRecord) takes up
-    count = 0
-    for _, v in valueKey[1:]:
-        if isinstance(v, _DeviceTuple):
-            count += len(v.DeltaValue) + 3
-        else:
-            count += 1
-    return count
+    return sum(
+        len(v.DeltaValue) + 3 if isinstance(v, _DeviceTuple) else 1
+        for _, v in valueKey[1:]
+    )
 
 
 def buildValue(value):
@@ -2638,10 +2611,7 @@ class ClassDefBuilder(object):
         glyphs = tuple(glyphs)
         if glyphs in self.classes_:
             return True
-        for glyph in glyphs:
-            if glyph in self.glyphs_:
-                return False
-        return True
+        return all(glyph not in self.glyphs_ for glyph in glyphs)
 
     def add(self, glyphs):
         if isinstance(glyphs, (set, frozenset)):
@@ -2862,10 +2832,10 @@ def _buildAxisRecords(axes, nameTable, windowsNames=True, macNames=True):
 def _buildAxisValuesFormat4(
     locations, axes, nameTable, windowsNames=True, macNames=True
 ):
-    axisTagToIndex = {}
-    for axisRecordIndex, axisDict in enumerate(axes):
-        axisTagToIndex[axisDict["tag"]] = axisRecordIndex
-
+    axisTagToIndex = {
+        axisDict["tag"]: axisRecordIndex
+        for axisRecordIndex, axisDict in enumerate(axes)
+    }
     axisValues = []
     for axisLocationDict in locations:
         axisValRec = ot.AxisValue()

@@ -50,7 +50,7 @@ def setMacCreatorAndType(path, fileCreator, fileType):
     if xattr is not None:
         from fontTools.misc.textTools import pad
 
-        if not all(len(s) == 4 for s in (fileCreator, fileType)):
+        if any(len(s) != 4 for s in (fileCreator, fileType)):
             raise TypeError("arg must be string of 4 chars")
         finderInfo = pad(bytesjoin([fileType, fileCreator]), 32)
         xattr.setxattr(path, "com.apple.FinderInfo", finderInfo)

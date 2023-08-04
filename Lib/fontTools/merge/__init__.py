@@ -19,7 +19,9 @@ import logging
 
 
 log = logging.getLogger("fontTools.merge")
-timer = Timer(logger=logging.getLogger(__name__ + ".timer"), level=logging.INFO)
+timer = Timer(
+    logger=logging.getLogger(f"{__name__}.timer"), level=logging.INFO
+)
 
 
 class Merger(object):
@@ -110,7 +112,7 @@ class Merger(object):
             if tag in self.options.drop_tables:
                 continue
 
-            with timer("merge '%s'" % tag):
+            with timer(f"merge '{tag}'"):
                 tables = [font.get(tag, NotImplemented) for font in fonts]
 
                 log.info("Merging '%s'.", tag)
@@ -147,8 +149,7 @@ class Merger(object):
                     mergeLogic = logic["*"]
                 except KeyError:
                     raise Exception(
-                        "Don't know how to merge key %s of class %s"
-                        % (key, returnTable.__class__.__name__)
+                        f"Don't know how to merge key {key} of class {returnTable.__class__.__name__}"
                     )
             if mergeLogic is NotImplemented:
                 continue
