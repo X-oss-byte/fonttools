@@ -100,7 +100,6 @@ def compact_class_pairs(
 ) -> List[otTables.PairPos]:
     from fontTools.otlLib.builder import buildPairPosClassesSubtable
 
-    subtables = []
     classes1: DefaultDict[int, List[str]] = defaultdict(list)
     for g in subtable.Coverage.glyphs:
         classes1[subtable.ClassDef1.classDefs.get(g, 0)].append(g)
@@ -117,9 +116,10 @@ def compact_class_pairs(
                 getattr(class2, "Value2", None),
             )
     grouped_pairs = cluster_pairs_by_class2_coverage_custom_cost(font, all_pairs, level)
-    for pairs in grouped_pairs:
-        subtables.append(buildPairPosClassesSubtable(pairs, font.getReverseGlyphMap()))
-    return subtables
+    return [
+        buildPairPosClassesSubtable(pairs, font.getReverseGlyphMap())
+        for pairs in grouped_pairs
+    ]
 
 
 def is_really_zero(class2: otTables.Class2Record) -> bool:
@@ -319,8 +319,8 @@ def cluster_pairs_by_class2_coverage_custom_cost(
         return [pairs]
 
     # Sorted for reproducibility/determinism
-    all_class1 = sorted(set(pair[0] for pair in pairs))
-    all_class2 = sorted(set(pair[1] for pair in pairs))
+    all_class1 = sorted({pair[0] for pair in pairs})
+    all_class2 = sorted({pair[1] for pair in pairs})
 
     # Use Python's big ints for binary vectors representing each line
     lines = [
@@ -444,7 +444,7 @@ def cluster_pairs_by_class2_coverage_custom_cost(
         pairs_by_class1[pair[0]][pair] = values
     pairs_groups: List[Pairs] = []
     for cluster in clusters:
-        pairs_group: Pairs = dict()
+        pairs_group: Pairs = {}
         for i in cluster.indices:
             class1 = all_class1[i]
             pairs_group.update(pairs_by_class1[class1])

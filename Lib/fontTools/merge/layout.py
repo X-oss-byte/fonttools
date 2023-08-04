@@ -83,8 +83,7 @@ def mergeScripts(lst):
     self = otTables.Script()
     self.LangSysRecord = lsrecords
     self.LangSysCount = len(lsrecords)
-    dfltLangSyses = [s.DefaultLangSys for s in lst if s.DefaultLangSys]
-    if dfltLangSyses:
+    if dfltLangSyses := [s.DefaultLangSys for s in lst if s.DefaultLangSys]:
         self.DefaultLangSys = mergeLangSyses(dfltLangSyses)
     else:
         self.DefaultLangSys = None
@@ -285,6 +284,9 @@ def mapLookups(self, lookupMap):
     otTables.ChainContextPos,
 )
 def __merge_classify_context(self):
+
+
+
     class ContextHelper(object):
         def __init__(self, klass, Format):
             if klass.__name__.endswith("Subst"):
@@ -293,10 +295,7 @@ def __merge_classify_context(self):
             else:
                 Typ = "Pos"
                 Type = "Pos"
-            if klass.__name__.startswith("Chain"):
-                Chain = "Chain"
-            else:
-                Chain = ""
+            Chain = "Chain" if klass.__name__.startswith("Chain") else ""
             ChainTyp = Chain + Typ
 
             self.Typ = Typ
@@ -304,14 +303,15 @@ def __merge_classify_context(self):
             self.Chain = Chain
             self.ChainTyp = ChainTyp
 
-            self.LookupRecord = Type + "LookupRecord"
+            self.LookupRecord = f"{Type}LookupRecord"
 
             if Format == 1:
-                self.Rule = ChainTyp + "Rule"
-                self.RuleSet = ChainTyp + "RuleSet"
+                self.Rule = f"{ChainTyp}Rule"
+                self.RuleSet = f"{ChainTyp}RuleSet"
             elif Format == 2:
-                self.Rule = ChainTyp + "ClassRule"
-                self.RuleSet = ChainTyp + "ClassSet"
+                self.Rule = f"{ChainTyp}ClassRule"
+                self.RuleSet = f"{ChainTyp}ClassSet"
+
 
     if self.Format not in [1, 2, 3]:
         return None  # Don't shoot the messenger; let it go
@@ -349,7 +349,7 @@ def mapLookups(self, lookupMap):
                 continue
             ll.LookupListIndex = lookupMap[ll.LookupListIndex]
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @add_method(otTables.ExtensionSubst, otTables.ExtensionPos)
@@ -357,7 +357,7 @@ def mapLookups(self, lookupMap):
     if self.Format == 1:
         self.ExtSubTable.mapLookups(lookupMap)
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @add_method(otTables.Lookup)
@@ -440,7 +440,7 @@ def layoutPreMerge(font):
             continue
 
         if t.table.LookupList:
-            lookupMap = {i: v for i, v in enumerate(t.table.LookupList.Lookup)}
+            lookupMap = dict(enumerate(t.table.LookupList.Lookup))
             t.table.LookupList.mapLookups(lookupMap)
             t.table.FeatureList.mapLookups(lookupMap)
 
@@ -449,13 +449,11 @@ def layoutPreMerge(font):
                 and GDEF.table.Version >= 0x00010002
                 and GDEF.table.MarkGlyphSetsDef
             ):
-                markFilteringSetMap = {
-                    i: v for i, v in enumerate(GDEF.table.MarkGlyphSetsDef.Coverage)
-                }
+                markFilteringSetMap = dict(enumerate(GDEF.table.MarkGlyphSetsDef.Coverage))
                 t.table.LookupList.mapMarkFilteringSets(markFilteringSetMap)
 
         if t.table.FeatureList and t.table.ScriptList:
-            featureMap = {i: v for i, v in enumerate(t.table.FeatureList.FeatureRecord)}
+            featureMap = dict(enumerate(t.table.FeatureList.FeatureRecord))
             t.table.ScriptList.mapFeatures(featureMap)
 
     # TODO FeatureParams nameIDs

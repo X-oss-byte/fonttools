@@ -172,7 +172,6 @@ class Options(object):
                 self.verbose = True
             elif option == "-q":
                 self.quiet = True
-            # dump options
             elif option == "-l":
                 self.listTables = True
             elif option == "-t":
@@ -195,13 +194,11 @@ class Options(object):
                 validOptions = ("raw", "row", "bitwise", "extfile")
                 if value not in validOptions:
                     raise getopt.GetoptError(
-                        "-z does not allow %s as a format. Use %s"
-                        % (option, validOptions)
+                        f"-z does not allow {option} as a format. Use {validOptions}"
                     )
                 self.bitmapGlyphDataFormat = value
             elif option == "-y":
                 self.fontNumber = int(value)
-            # compile options
             elif option == "-m":
                 self.mergeFile = value
             elif option == "-b":
@@ -255,7 +252,7 @@ def ttList(input, output, options):
     ttf = TTFont(input, fontNumber=options.fontNumber, lazy=True)
     reader = ttf.reader
     tags = sorted(reader.keys())
-    print('Listing table info for "%s":' % input)
+    print(f'Listing table info for "{input}":')
     format = "    %4s  %10s  %8s  %8s"
     print(format % ("tag ", "  checksum", "  length", "  offset"))
     print(format % ("----", "----------", "--------", "--------"))
@@ -315,7 +312,7 @@ def ttCompile(input, output, options):
     output_name = output
     if output == "-":
         output, output_name = sys.stdout.buffer, sys.stdout.name
-    log.info('Compiling "%s" to "%s"...' % (input_name, output))
+    log.info(f'Compiling "{input_name}" to "{output}"...')
     if options.useZopfli:
         from fontTools.ttLib import sfnt
 
@@ -369,10 +366,7 @@ def guessFileType(fileName):
     elif head == "<?xm":
         # Use 'latin1' because that can't fail.
         header = tostr(header, "latin1")
-        if opentypeheaderRE.search(header):
-            return "OTX"
-        else:
-            return "TTX"
+        return "OTX" if opentypeheaderRE.search(header) else "TTX"
     return None
 
 
@@ -399,22 +393,19 @@ def parseOptions(args):
 
     for input in files:
         if input != "-" and not os.path.isfile(input):
-            raise getopt.GetoptError('File not found: "%s"' % input)
+            raise getopt.GetoptError(f'File not found: "{input}"')
         tp = guessFileType(input)
         if tp in ("OTF", "TTF", "TTC", "WOFF", "WOFF2"):
             extension = ".ttx"
-            if options.listTables:
-                action = ttList
-            else:
-                action = ttDump
+            action = ttList if options.listTables else ttDump
         elif tp == "TTX":
-            extension = "." + options.flavor if options.flavor else ".ttf"
+            extension = f".{options.flavor}" if options.flavor else ".ttf"
             action = ttCompile
         elif tp == "OTX":
-            extension = "." + options.flavor if options.flavor else ".otf"
+            extension = f".{options.flavor}" if options.flavor else ".otf"
             action = ttCompile
         else:
-            raise getopt.GetoptError('Unknown file type: "%s"' % input)
+            raise getopt.GetoptError(f'Unknown file type: "{input}"')
 
         if options.outputFile:
             output = options.outputFile

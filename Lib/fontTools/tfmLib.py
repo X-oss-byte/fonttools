@@ -386,11 +386,7 @@ class TFM:
                                 name = "mid"
                             elif i == 2:
                                 name = "bot"
-                            if noneexistent(part):
-                                varchar[name] = c
-                            else:
-                                varchar[name] = part
-
+                            varchar[name] = c if noneexistent(part) else part
         self.ligatures = {}
         self.kerning = {}
         for c, i in sorted(lig_kern_map.items()):
@@ -400,9 +396,7 @@ class TFM:
 
             while i < sizes.nl:
                 cmd = lig_kern_command(lig_step(i))
-                if cmd.skip_byte > STOP_FLAG:
-                    pass
-                else:
+                if cmd.skip_byte <= STOP_FLAG:
                     if cmd.op_byte >= KERN_FLAG:
                         r = 256 * (cmd.op_byte - KERN_FLAG) + cmd.remainder
                         self.kerning.setdefault(c, {})[cmd.next_char] = kern(r)
@@ -438,8 +432,7 @@ if __name__ == "__main__":
     tfm = TFM(sys.argv[1])
     print(
         "\n".join(
-            x
-            for x in [
+            [
                 f"tfm.checksum={tfm.checksum}",
                 f"tfm.designsize={tfm.designsize}",
                 f"tfm.codingscheme={tfm.codingscheme}",

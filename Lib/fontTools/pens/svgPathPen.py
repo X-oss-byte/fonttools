@@ -74,7 +74,7 @@ class SVGPathPen(BasePen):
         ['M0 10']
         """
         self._handleAnchor()
-        t = "M%s" % (pointToString(pt, self._ntos))
+        t = f"M{pointToString(pt, self._ntos)}"
         self._commands.append(t)
         self._lastCommand = "M"
         self._lastX, self._lastY = pt
@@ -119,19 +119,15 @@ class SVGPathPen(BasePen):
         # duplicate point
         if x == self._lastX and y == self._lastY:
             return
-        # vertical line
         elif x == self._lastX:
             cmd = "V"
             pts = self._ntos(y)
-        # horizontal line
         elif y == self._lastY:
             cmd = "H"
             pts = self._ntos(x)
-        # previous was a moveto
         elif self._lastCommand == "M":
             cmd = None
-            pts = " " + pointToString(pt, self._ntos)
-        # basic
+            pts = f" {pointToString(pt, self._ntos)}"
         else:
             cmd = "L"
             pts = pointToString(pt, self._ntos)
@@ -153,8 +149,8 @@ class SVGPathPen(BasePen):
         ['C10 20 30 40 50 60']
         """
         t = "C"
-        t += pointToString(pt1, self._ntos) + " "
-        t += pointToString(pt2, self._ntos) + " "
+        t += f"{pointToString(pt1, self._ntos)} "
+        t += f"{pointToString(pt2, self._ntos)} "
         t += pointToString(pt3, self._ntos)
         self._commands.append(t)
         self._lastCommand = "C"
@@ -174,7 +170,7 @@ class SVGPathPen(BasePen):
         """
         assert pt2 is not None
         t = "Q"
-        t += pointToString(pt1, self._ntos) + " "
+        t += f"{pointToString(pt1, self._ntos)} "
         t += pointToString(pt2, self._ntos)
         self._commands.append(t)
         self._lastCommand = "Q"

@@ -274,9 +274,9 @@ def merge(self, m, tables):
         )
         font.Private = private
         fontGlyphOrder = set(font.getGlyphOrder())
-        for name in font.strings.strings:
-            if name in fontGlyphOrder:
-                glyphOrderStrings.append(name)
+        glyphOrderStrings.extend(
+            name for name in font.strings.strings if name in fontGlyphOrder
+        )
         cs = font.CharStrings
         gs = table.cff.GlobalSubrs
         log.debug("Font %d CharStrings: %d.", i, len(cs))

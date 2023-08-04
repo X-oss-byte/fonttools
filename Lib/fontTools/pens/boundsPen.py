@@ -38,8 +38,7 @@ class ControlBoundsPen(BasePen):
     def _addMoveTo(self):
         if self._start is None:
             return
-        bounds = self.bounds
-        if bounds:
+        if bounds := self.bounds:
             self.bounds = updateBounds(bounds, self._start)
         else:
             x, y = self._start

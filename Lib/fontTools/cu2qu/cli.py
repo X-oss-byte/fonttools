@@ -155,7 +155,7 @@ def main(args=None):
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
         elif not os.path.isdir(output_dir):
-            parser.error("'%s' is not a directory" % output_dir)
+            parser.error(f"'{output_dir}' is not a directory")
         output_paths = [
             os.path.join(output_dir, os.path.basename(p)) for p in options.infiles
         ]
@@ -169,7 +169,7 @@ def main(args=None):
         dump_stats=options.verbose > 0,
         max_err_em=options.conversion_error,
         reverse_direction=options.reverse_direction,
-        all_quadratic=False if options.mixed else True,
+        all_quadratic=not options.mixed,
     )
 
     if options.interpolatable:

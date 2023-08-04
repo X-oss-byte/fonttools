@@ -101,7 +101,7 @@ class Data:
 
     def __init__(self, data: bytes) -> None:
         if not isinstance(data, bytes):
-            raise TypeError("Expected bytes, found %s" % type(data).__name__)
+            raise TypeError(f"Expected bytes, found {type(data).__name__}")
         self.data = data
 
     @classmethod
@@ -122,7 +122,7 @@ class Data:
             return NotImplemented
 
     def __repr__(self) -> str:
-        return "%s(%s)" % (self.__class__.__name__, repr(self.data))
+        return f"{self.__class__.__name__}({repr(self.data)})"
 
 
 def _encode_base64(
@@ -135,8 +135,7 @@ def _encode_base64(
         max_length = max(16, maxlinelength - len(indent))
         chunks = []
         for i in range(0, len(data), max_length):
-            chunks.append(indent)
-            chunks.append(data[i : i + max_length])
+            chunks.extend((indent, data[i : i + max_length]))
         chunks.append(indent)
         data = b"".join(chunks)
     return data
@@ -254,7 +253,7 @@ def start_dict(self: PlistTarget) -> None:
 
 def end_dict(self: PlistTarget) -> None:
     if self.current_key:
-        raise ValueError("missing value for key '%s'" % self.current_key)
+        raise ValueError(f"missing value for key '{self.current_key}'")
     self.stack.pop()
 
 
@@ -334,9 +333,7 @@ def _string_element(value: str, ctx: SimpleNamespace) -> etree.Element:
 
 
 def _bool_element(value: bool, ctx: SimpleNamespace) -> etree.Element:
-    if value:
-        return etree.Element("true")
-    return etree.Element("false")
+    return etree.Element("true") if value else etree.Element("false")
 
 
 def _integer_element(value: int, ctx: SimpleNamespace) -> etree.Element:
@@ -406,14 +403,13 @@ def _data_element(data: bytes, ctx: SimpleNamespace) -> etree.Element:
 def _string_or_data_element(raw_bytes: bytes, ctx: SimpleNamespace) -> etree.Element:
     if ctx.use_builtin_types:
         return _data_element(raw_bytes, ctx)
-    else:
-        try:
-            string = raw_bytes.decode(encoding="ascii", errors="strict")
-        except UnicodeDecodeError:
-            raise ValueError(
-                "invalid non-ASCII bytes; use unicode string instead: %r" % raw_bytes
-            )
-        return _string_element(string, ctx)
+    try:
+        string = raw_bytes.decode(encoding="ascii", errors="strict")
+    except UnicodeDecodeError:
+        raise ValueError(
+            "invalid non-ASCII bytes; use unicode string instead: %r" % raw_bytes
+        )
+    return _string_element(string, ctx)
 
 
 # The following is probably not entirely correct. The signature should take `Any`
@@ -423,7 +419,7 @@ def _string_or_data_element(raw_bytes: bytes, ctx: SimpleNamespace) -> etree.Ele
 # usable typing information for the optimistic case.
 @singledispatch
 def _make_element(value: PlistEncodable, ctx: SimpleNamespace) -> etree.Element:
-    raise TypeError("unsupported type: %s" % type(value))
+    raise TypeError(f"unsupported type: {type(value)}")
 
 
 _make_element.register(str)(_string_element)
@@ -542,7 +538,7 @@ def load(
     """
 
     if not hasattr(fp, "read"):
-        raise AttributeError("'%s' object has no attribute 'read'" % type(fp).__name__)
+        raise AttributeError(f"'{type(fp).__name__}' object has no attribute 'read'")
     target = PlistTarget(use_builtin_types=use_builtin_types, dict_type=dict_type)
     parser = etree.XMLParser(target=target)
     result = etree.parse(fp, parser=parser)
@@ -610,7 +606,7 @@ def dump(
     """
 
     if not hasattr(fp, "write"):
-        raise AttributeError("'%s' object has no attribute 'write'" % type(fp).__name__)
+        raise AttributeError(f"'{type(fp).__name__}' object has no attribute 'write'")
     root = etree.Element("plist", version="1.0")
     el = totree(
         value,

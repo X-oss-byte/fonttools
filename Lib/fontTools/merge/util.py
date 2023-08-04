@@ -19,7 +19,9 @@ def equal(lst):
     lst = list(lst)
     t = iter(lst)
     first = next(t)
-    assert all(item == first for item in t), "Expected all items to be equal: %s" % lst
+    assert all(
+        item == first for item in t
+    ), f"Expected all items to be equal: {lst}"
     return first
 
 
@@ -71,7 +73,7 @@ def sumLists(lst):
 def sumDicts(lst):
     d = {}
     for item in lst:
-        d.update(item)
+        d |= item
     return d
 
 
@@ -86,7 +88,7 @@ def mergeBits(bitmap):
                 try:
                     mergeLogic = bitmap["*"]
                 except KeyError:
-                    raise Exception("Don't know how to merge bit %s" % bitNumber)
+                    raise Exception(f"Don't know how to merge bit {bitNumber}")
             shiftedBit = 1 << bitNumber
             mergedValue = mergeLogic(bool(item & shiftedBit) for item in lst)
             returnValue |= mergedValue << bitNumber
@@ -115,7 +117,7 @@ class GregariousIdentityDict(object):
 
     def __init__(self, lst):
         self.l = lst
-        self.s = set(id(v) for v in lst)
+        self.s = {id(v) for v in lst}
 
     def __getitem__(self, v):
         if id(v) not in self.s:

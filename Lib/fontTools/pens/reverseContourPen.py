@@ -51,10 +51,7 @@ def reversedContour(contour, outputImpliedClosingLine=False):
 
     if not contour:
         # contour contains only one segment, nothing to reverse
-        if firstType == "moveTo":
-            closed = False  # single-point paths can't be closed
-        else:
-            closed = True  # off-curve paths are closed by definition
+        closed = firstType != "moveTo"
         yield firstType, firstPts
     else:
         lastType, lastPts = contour[-1]
@@ -67,12 +64,7 @@ def reversedContour(contour, outputImpliedClosingLine=False):
                 yield "lineTo", (lastOnCurve,)
                 contour[-1] = (lastType, tuple(lastPts[:-1]) + (firstOnCurve,))
 
-            if len(contour) > 1:
-                secondType, secondPts = contour[0]
-            else:
-                # contour has only two points, the second and last are the same
-                secondType, secondPts = lastType, lastPts
-
+            secondType, secondPts = contour[0] if len(contour) > 1 else (lastType, lastPts)
             if not outputImpliedClosingLine:
                 # if a lineTo follows the initial moveTo, after reversing it
                 # will be implied by the closePath, so we don't emit one;

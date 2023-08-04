@@ -400,7 +400,7 @@ class FontBuilder(object):
         subTables = []
         highestUnicode = max(cmapping) if cmapping else 0
         if highestUnicode > 0xFFFF:
-            cmapping_3_1 = dict((k, v) for k, v in cmapping.items() if k < 0x10000)
+            cmapping_3_1 = {k: v for k, v in cmapping.items() if k < 0x10000}
             subTable_3_10 = buildCmapSubTable(cmapping, 12, 3, 10)
             subTables.append(subTable_3_10)
         else:
@@ -479,10 +479,7 @@ class FontBuilder(object):
         nameTable.names = []
 
         for nameName, nameValue in nameStrings.items():
-            if isinstance(nameName, int):
-                nameID = nameName
-            else:
-                nameID = _nameIDs[nameName]
+            nameID = nameName if isinstance(nameName, int) else _nameIDs[nameName]
             if isinstance(nameValue, str):
                 nameValue = dict(en=nameValue)
             nameTable.addMultilingualName(
@@ -812,10 +809,7 @@ class FontBuilder(object):
         """Create a new `maxp` table. This is called implicitly by FontBuilder
         itself and is usually not called by client code.
         """
-        if self.isTTF:
-            defaults = _maxpDefaultsTTF
-        else:
-            defaults = _maxpDefaultsOTF
+        defaults = _maxpDefaultsTTF if self.isTTF else _maxpDefaultsOTF
         self._initTableWithValues("maxp", defaults, {})
 
     def setupDummyDSIG(self):

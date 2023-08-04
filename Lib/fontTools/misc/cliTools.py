@@ -42,8 +42,8 @@ def makeOutputFileName(
     if extension is None:
         extension = os.path.splitext(input)[1]
     output = os.path.join(dirName, fileName + suffix + extension)
-    n = 1
     if not overWrite:
+        n = 1
         while os.path.exists(output):
             output = os.path.join(
                 dirName, fileName + suffix + "#" + repr(n) + extension

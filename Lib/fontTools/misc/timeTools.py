@@ -47,13 +47,12 @@ def asctime(t=None):
     """
     if t is None:
         t = time.localtime()
-    s = "%s %s %2s %s" % (
+    return "%s %s %2s %s" % (
         DAYNAMES[t.tm_wday],
         MONTHNAMES[t.tm_mon],
         t.tm_mday,
         time.strftime("%H:%M:%S %Y", t),
     )
-    return s
 
 
 def timestampToString(value):
@@ -65,7 +64,7 @@ def timestampFromString(value):
     t = datetime.strptime(value[7:], " %d %H:%M:%S %Y")
     t = t.replace(month=MONTHNAMES.index(mnth), tzinfo=timezone.utc)
     wkday_idx = DAYNAMES.index(wkday)
-    assert t.weekday() == wkday_idx, '"' + value + '" has inconsistent weekday'
+    assert t.weekday() == wkday_idx, f'"{value}" has inconsistent weekday'
     return int(t.timestamp()) - epoch_diff
 
 

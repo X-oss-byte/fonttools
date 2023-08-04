@@ -35,7 +35,7 @@ class HashPointPen(AbstractPointPen):
 
     def __init__(self, glyphWidth=0, glyphSet=None):
         self.glyphset = glyphSet
-        self.data = ["w%s" % round(glyphWidth, 9)]
+        self.data = [f"w{round(glyphWidth, 9)}"]
 
     @property
     def hash(self):
@@ -59,10 +59,7 @@ class HashPointPen(AbstractPointPen):
         identifier=None,
         **kwargs,
     ):
-        if segmentType is None:
-            pt_type = "o"  # offcurve
-        else:
-            pt_type = segmentType[0]
+        pt_type = "o" if segmentType is None else segmentType[0]
         self.data.append(f"{pt_type}{pt[0]:g}{pt[1]:+g}")
 
     def addComponent(self, baseGlyphName, transformation, identifier=None, **kwargs):

@@ -137,12 +137,11 @@ def configLogger(**kwargs):
             raise ValueError(
                 "'stream' and 'filename' should not be " "specified together"
             )
-    else:
-        if "stream" in kwargs or "filename" in kwargs:
-            raise ValueError(
-                "'stream' or 'filename' should not be "
-                "specified together with 'handlers'"
-            )
+    elif "stream" in kwargs or "filename" in kwargs:
+        raise ValueError(
+            "'stream' or 'filename' should not be "
+            "specified together with 'handlers'"
+        )
     if handlers is None:
         filename = kwargs.pop("filename", None)
         mode = kwargs.pop("filemode", "a")
@@ -182,7 +181,7 @@ def configLogger(**kwargs):
         logger.setLevel(level)
     if kwargs:
         keys = ", ".join(kwargs.keys())
-        raise ValueError("Unrecognised argument(s): %s" % keys)
+        raise ValueError(f"Unrecognised argument(s): {keys}")
 
 
 def _resetExistingLoggers(parent="root"):
@@ -198,11 +197,11 @@ def _resetExistingLoggers(parent="root"):
     elif parent not in existing:
         # nothing to do
         return
-    elif parent in existing:
+    else:
         loggers_to_reset = [parent]
         # collect children, starting with the entry after parent name
         i = existing.index(parent) + 1
-        prefixed = parent + "."
+        prefixed = f"{parent}."
         pflen = len(prefixed)
         num_existing = len(existing)
         while i < num_existing:
@@ -293,17 +292,14 @@ class Timer(object):
         if logger is None:
             for arg in ("msg", "level"):
                 if locals().get(arg) is not None:
-                    raise ValueError("'%s' can't be specified without a 'logger'" % arg)
+                    raise ValueError(f"'{arg}' can't be specified without a 'logger'")
         self.logger = logger
         self.level = level if level is not None else TIME_LEVEL
         self.msg = msg
 
     def reset(self, start=None):
         """Reset timer to 'start_time' or the current time."""
-        if start is None:
-            self.start = self._time()
-        else:
-            self.start = start
+        self.start = self._time() if start is None else start
         self.last = self.start
         self.elapsed = 0.0
 
@@ -367,7 +363,7 @@ class Timer(object):
             func = func_or_msg
             # use the function name when no explicit 'msg' is provided
             if not self.msg:
-                self.msg = "run '%s'" % func.__name__
+                self.msg = f"run '{func.__name__}'"
 
             @wraps(func)
             def wrapper(*args, **kwds):
@@ -438,10 +434,7 @@ class CapturingLogHandler(logging.Handler):
     def __init__(self, logger, level):
         super(CapturingLogHandler, self).__init__(level=level)
         self.records = []
-        if isinstance(logger, str):
-            self.logger = logging.getLogger(logger)
-        else:
-            self.logger = logger
+        self.logger = logging.getLogger(logger) if isinstance(logger, str) else logger
 
     def __enter__(self):
         self.original_disabled = self.logger.disabled
@@ -474,7 +467,7 @@ class CapturingLogHandler(logging.Handler):
             if pattern.search(r.getMessage()):
                 return True
         if msg is None:
-            msg = "Pattern '%s' not found in logger records" % regexp
+            msg = f"Pattern '{regexp}' not found in logger records"
         assert 0, msg
 
 

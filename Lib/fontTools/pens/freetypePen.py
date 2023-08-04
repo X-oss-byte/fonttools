@@ -138,8 +138,7 @@ class FreeTypePen(BasePen):
                 )
         tags = []
         for contour in self.contours:
-            for tag in contour.tags:
-                tags.append(tag)
+            tags.extend(iter(contour.tags))
         contours = []
         contours_sum = 0
         for contour in self.contours:

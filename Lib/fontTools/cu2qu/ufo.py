@@ -57,7 +57,7 @@ def zip(*args):
     returned for python 2/3 compatibility.
     """
 
-    if len(set(len(a) for a in args)) != 1:
+    if len({len(a) for a in args}) != 1:
         raise UnequalZipLengthsError(*args)
     return list(_zip(*args))
 
@@ -140,7 +140,7 @@ def _set_segments(glyph, segments, reverse_direction):
         elif tag == "end":
             pen.endPath()
         else:
-            raise AssertionError('Unhandled segment type "%s"' % tag)
+            raise AssertionError(f'Unhandled segment type "{tag}"')
 
 
 def _segments_to_quadratic(segments, max_err, stats, all_quadratic=True):
@@ -182,7 +182,7 @@ def _glyphs_to_quadratic(glyphs, max_err, reverse_direction, stats, all_quadrati
     incompatible = {}
     for i, segments in enumerate(segments_by_location):
         tag = segments[0][0]
-        if not all(s[0] == tag for s in segments[1:]):
+        if any(s[0] != tag for s in segments[1:]):
             incompatible[i] = [s[0] for s in segments]
         elif tag == "curve":
             new_segments = _segments_to_quadratic(
@@ -268,9 +268,7 @@ def fonts_to_quadratic(
             if curve_type in ("quadratic", "mixed"):
                 logger.info("Curves already converted to quadratic")
                 return False
-            elif curve_type == "cubic":
-                pass  # keep converting
-            else:
+            elif curve_type != "cubic":
                 raise NotImplementedError(curve_type)
         elif len(curve_types) > 1:
             # going to crash later if they do differ
@@ -319,8 +317,7 @@ def fonts_to_quadratic(
     if modified and dump_stats:
         spline_lengths = sorted(stats.keys())
         logger.info(
-            "New spline lengths: %s"
-            % (", ".join("%s: %d" % (l, stats[l]) for l in spline_lengths))
+            f'New spline lengths: {", ".join("%s: %d" % (l, stats[l]) for l in spline_lengths)}'
         )
 
     if remember_curve_type:

@@ -70,25 +70,28 @@ if with_cython and not has_cython:
 
 ext_modules = []
 if with_cython is True or (with_cython is None and has_cython):
-    ext_modules.append(
-        Extension("fontTools.cu2qu.cu2qu", ["Lib/fontTools/cu2qu/cu2qu.py"]),
+    ext_modules.extend(
+        (
+            Extension(
+                "fontTools.cu2qu.cu2qu", ["Lib/fontTools/cu2qu/cu2qu.py"]
+            ),
+            Extension(
+                "fontTools.qu2cu.qu2cu", ["Lib/fontTools/qu2cu/qu2cu.py"]
+            ),
+            Extension(
+                "fontTools.misc.bezierTools",
+                ["Lib/fontTools/misc/bezierTools.py"],
+            ),
+            Extension(
+                "fontTools.pens.momentsPen",
+                ["Lib/fontTools/pens/momentsPen.py"],
+            ),
+            Extension("fontTools.varLib.iup", ["Lib/fontTools/varLib/iup.py"]),
+            Extension(
+                "fontTools.feaLib.lexer", ["Lib/fontTools/feaLib/lexer.py"]
+            ),
+        )
     )
-    ext_modules.append(
-        Extension("fontTools.qu2cu.qu2cu", ["Lib/fontTools/qu2cu/qu2cu.py"]),
-    )
-    ext_modules.append(
-        Extension("fontTools.misc.bezierTools", ["Lib/fontTools/misc/bezierTools.py"]),
-    )
-    ext_modules.append(
-        Extension("fontTools.pens.momentsPen", ["Lib/fontTools/pens/momentsPen.py"]),
-    )
-    ext_modules.append(
-        Extension("fontTools.varLib.iup", ["Lib/fontTools/varLib/iup.py"]),
-    )
-    ext_modules.append(
-        Extension("fontTools.feaLib.lexer", ["Lib/fontTools/feaLib/lexer.py"]),
-    )
-
 extras_require = {
     # for fontTools.ufoLib: to read/write UFO fonts
     "ufo": [
@@ -267,7 +270,7 @@ class release(Command):
 
     def run(self):
         if self.part is not None:
-            log.info("bumping '%s' version" % self.part)
+            log.info(f"bumping '{self.part}' version")
             self.bumpversion(self.part, commit=False)
             release_version = self.bumpversion(
                 "release", commit=False, allow_dirty=True
@@ -275,7 +278,7 @@ class release(Command):
         else:
             log.info("stripping pre-release suffix")
             release_version = self.bumpversion("release")
-        log.info("  version = %s" % release_version)
+        log.info(f"  version = {release_version}")
 
         changes = self.format_changelog(release_version)
 
@@ -284,7 +287,7 @@ class release(Command):
 
         log.info("bumping 'patch' version and pre-release suffix")
         next_dev_version = self.bumpversion("patch", commit=True)
-        log.info("  version = %s" % next_dev_version)
+        log.info(f"  version = {next_dev_version}")
 
     def git_commit(self, version):
         """Stage and commit all relevant version files, and format the commit
@@ -294,7 +297,7 @@ class release(Command):
 
         log.info("committing changes")
         for f in files:
-            log.info("  %s" % f)
+            log.info(f"  {f}")
         if self.dry_run:
             return
         sp.check_call(["git", "add"] + files)
@@ -306,7 +309,7 @@ class release(Command):
         Optionally 'sign' the tag with the user's GPG key.
         """
         log.info(
-            "creating %s git tag '%s'" % ("signed" if sign else "annotated", version)
+            f"""creating {"signed" if sign else "annotated"} git tag '{version}'"""
         )
         if self.dry_run:
             return
@@ -340,8 +343,7 @@ class release(Command):
             bumpversion.cli.main(args)
 
         last_line = out.getvalue().splitlines()[-1]
-        new_version = last_line.replace("new_version=", "")
-        return new_version
+        return last_line.replace("new_version=", "")
 
     def format_changelog(self, version):
         """Write new header at beginning of changelog file with the specified
@@ -409,8 +411,7 @@ def find_data_files(manpath="share/man"):
 
     manpages = [f for f in glob(pjoin("Doc", "man", "man1", "*.1")) if isfile(f)]
 
-    data_files = [(manpagedir, manpages)]
-    return data_files
+    return [(manpagedir, manpages)]
 
 
 class cython_build_ext(_build_ext):
@@ -456,7 +457,7 @@ class cython_build_ext(_build_ext):
                 pass
             else:
                 bdist_wheel.root_is_pure = True
-            log.error("error: building extensions failed: %s" % e)
+            log.error(f"error: building extensions failed: {e}")
 
 
 cmdclass = {"release": release}

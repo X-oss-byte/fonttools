@@ -81,26 +81,18 @@ def getStatNames(
     label = doc.labelForUserLocation(userLocation)
     if label is not None:
         styleNames = {"en": label.name, **label.labelNames}
-    # Otherwise, scour the axis labels for matches.
-    else:
-        # Gather all languages in which at least one translation is provided
-        # Then build names for all these languages, but fallback to English
-        # whenever a translation is missing.
-        labels = _getAxisLabelsForUserLocation(doc.axes, userLocation)
-        if labels:
-            languages = set(
-                language for label in labels for language in label.labelNames
+    elif labels := _getAxisLabelsForUserLocation(doc.axes, userLocation):
+        languages = {language for label in labels for language in label.labelNames}
+        languages.add("en")
+        for language in languages:
+            styleName = " ".join(
+                label.labelNames.get(language, label.defaultName)
+                for label in labels
+                if not label.elidable
             )
-            languages.add("en")
-            for language in languages:
-                styleName = " ".join(
-                    label.labelNames.get(language, label.defaultName)
-                    for label in labels
-                    if not label.elidable
-                )
-                if not styleName and doc.elidedFallbackName is not None:
-                    styleName = doc.elidedFallbackName
-                styleNames[language] = styleName
+            if not styleName and doc.elidedFallbackName is not None:
+                styleName = doc.elidedFallbackName
+            styleNames[language] = styleName
 
     if "en" not in familyNames or "en" not in styleNames:
         # Not enough information to compute PS names of styleMap names
@@ -125,7 +117,7 @@ def getStatNames(
     for language in set(familyNames).union(styleNames.keys()):
         familyName = familyNames.get(language, familyNames["en"])
         styleName = styleNamesForStyleMap.get(language, styleNamesForStyleMap["en"])
-        styleMapFamilyNames[language] = (familyName + " " + styleName).strip()
+        styleMapFamilyNames[language] = f"{familyName} {styleName}".strip()
 
     return StatNames(
         familyNames=familyNames,

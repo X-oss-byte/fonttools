@@ -18,10 +18,10 @@ def computeMegaGlyphOrder(merger, glyphOrders):
         for i, glyphName in enumerate(glyphOrder):
             if glyphName in megaOrder:
                 n = megaOrder[glyphName]
-                while (glyphName + "." + repr(n)) in megaOrder:
+                while f"{glyphName}.{repr(n)}" in megaOrder:
                     n += 1
                 megaOrder[glyphName] = n
-                glyphName += "." + repr(n)
+                glyphName += f".{repr(n)}"
                 glyphOrder[i] = glyphName
             megaOrder[glyphName] = 1
     merger.glyphOrder = megaOrder = list(megaOrder.keys())
@@ -96,7 +96,7 @@ def computeMegaCmap(merger, cmapTables):
     # Build the unicode mapping
     merger.cmap = cmap = {}
     fontIndexForGlyph = {}
-    glyphSets = [None for f in merger.fonts] if hasattr(merger, "fonts") else None
+    glyphSets = [None for _ in merger.fonts] if hasattr(merger, "fonts") else None
 
     for table, fontIdx in chosenCmapTables:
         # handle duplicates
@@ -132,10 +132,10 @@ def renameCFFCharStrings(merger, glyphOrder, cffTable):
     """Rename topDictIndex charStrings based on glyphOrder."""
     td = cffTable.cff.topDictIndex[0]
 
-    charStrings = {}
-    for i, v in enumerate(td.CharStrings.charStrings.values()):
-        glyphName = glyphOrder[i]
-        charStrings[glyphName] = v
+    charStrings = {
+        glyphOrder[i]: v
+        for i, v in enumerate(td.CharStrings.charStrings.values())
+    }
     td.CharStrings.charStrings = charStrings
 
     td.charset = list(glyphOrder)

@@ -119,8 +119,7 @@ def programToCommands(program, getNumRegions=None):
         if token in {"hintmask", "cntrmask"}:
             if stack:
                 commands.append(("", stack))
-            commands.append((token, []))
-            commands.append(("", [next(it)]))
+            commands.extend(((token, []), ("", [next(it)])))
         else:
             commands.append((token, stack))
         stack = []
@@ -310,7 +309,7 @@ def _convertBlendOpToArgs(blendList):
     # recursive blend op calls, some of these args may also
     # be a list of blend op args, and need to be converted before
     # we convert the current list.
-    if any([isinstance(arg, list) for arg in blendList]):
+    if any(isinstance(arg, list) for arg in blendList):
         args = [
             i
             for e in blendList
@@ -333,7 +332,7 @@ def _convertBlendOpToArgs(blendList):
     args = args[:-1]
 
     numRegions = len(args) // numBlends - 1
-    if not (numBlends * (numRegions + 1) == len(args)):
+    if numBlends * (numRegions + 1) != len(args):
         raise ValueError(blendList)
 
     defaultArgs = [[arg] for arg in args[:numBlends]]
@@ -342,8 +341,7 @@ def _convertBlendOpToArgs(blendList):
     deltaList = [
         deltaArgs[i : i + numRegions] for i in range(0, numDeltaValues, numRegions)
     ]
-    blend_args = [a + b + [1] for a, b in zip(defaultArgs, deltaList)]
-    return blend_args
+    return [a + b + [1] for a, b in zip(defaultArgs, deltaList)]
 
 
 def generalizeCommands(commands, ignoreErrors=False):
@@ -351,7 +349,7 @@ def generalizeCommands(commands, ignoreErrors=False):
     mapping = _GeneralizerDecombinerCommandsMap
     for op, args in commands:
         # First, generalize any blend args in the arg list.
-        if any([isinstance(arg, list) for arg in args]):
+        if any(isinstance(arg, list) for arg in args):
             try:
                 args = [
                     n
@@ -362,10 +360,7 @@ def generalizeCommands(commands, ignoreErrors=False):
                 ]
             except ValueError:
                 if ignoreErrors:
-                    # Store op as data, such that consumers of commands do not have to
-                    # deal with incorrect number of arguments.
-                    result.append(("", args))
-                    result.append(("", [op]))
+                    result.extend((("", args), ("", [op])))
                 else:
                     raise
 
@@ -374,14 +369,10 @@ def generalizeCommands(commands, ignoreErrors=False):
             result.append((op, args))
             continue
         try:
-            for command in func(args):
-                result.append(command)
+            result.extend(iter(func(args)))
         except ValueError:
             if ignoreErrors:
-                # Store op as data, such that consumers of commands do not have to
-                # deal with incorrect number of arguments.
-                result.append(("", args))
-                result.append(("", [op]))
+                result.extend((("", args), ("", [op])))
             else:
                 raise
     return result
@@ -409,15 +400,9 @@ def _categorizeVector(v):
     ('r', (1, 2))
     """
     if not v[0]:
-        if not v[1]:
-            return "0", v[:1]
-        else:
-            return "v", v[1:]
+        return ("0", v[:1]) if not v[1] else ("v", v[1:])
     else:
-        if not v[1]:
-            return "h", v[:1]
-        else:
-            return "r", v
+        return ("h", v[:1]) if not v[1] else ("r", v)
 
 
 def _mergeCategories(a, b):
@@ -425,9 +410,7 @@ def _mergeCategories(a, b):
         return b
     if b == "0":
         return a
-    if a == b:
-        return a
-    return None
+    return a if a == b else None
 
 
 def _negateCategory(a):
@@ -448,9 +431,9 @@ def _convertToBlendCmds(args):
     i = 0
     while i < num_args:
         arg = args[i]
+        i += 1
         if not isinstance(arg, list):
             new_args.append(arg)
-            i += 1
             stack_use += 1
         else:
             prev_stack_use = stack_use
@@ -460,7 +443,6 @@ def _convertToBlendCmds(args):
             # up to the max stack limit.
             num_sources = len(arg) - 1
             blendlist = [arg]
-            i += 1
             stack_use += 1 + num_sources  # 1 for the num_blends arg
             while (i < num_args) and isinstance(args[i], list):
                 blendlist.append(args[i])
@@ -478,10 +460,7 @@ def _convertToBlendCmds(args):
             # blendList now contains as many single blend tuples as can be
             # combined without exceeding the CFF2 stack limit.
             num_blends = len(blendlist)
-            # append the 'num_blends' default font values
-            blend_args = []
-            for arg in blendlist:
-                blend_args.append(arg[0])
+            blend_args = [arg[0] for arg in blendlist]
             for arg in blendlist:
                 assert arg[-1] == 1
                 blend_args.extend(arg[1:-1])

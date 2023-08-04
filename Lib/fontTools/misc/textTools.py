@@ -16,8 +16,8 @@ class Tag(str):
             blob = blob.decode("latin-1")
         return blob
 
-    def __new__(self, content):
-        return str.__new__(self, self.transcode(content))
+    def __new__(cls, content):
+        return str.__new__(cls, cls.transcode(content))
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -41,10 +41,10 @@ def deHexStr(hexdata):
     """Convert a hex string to binary data."""
     hexdata = strjoin(hexdata.split())
     if len(hexdata) % 2:
-        hexdata = hexdata + "0"
-    data = []
-    for i in range(0, len(hexdata), 2):
-        data.append(bytechr(int(hexdata[i : i + 2], 16)))
+        hexdata = f"{hexdata}0"
+    data = [
+        bytechr(int(hexdata[i : i + 2], 16)) for i in range(0, len(hexdata), 2)
+    ]
     return bytesjoin(data)
 
 
@@ -62,10 +62,7 @@ def num2binary(l, bits=32):
     items = []
     binary = ""
     for i in range(bits):
-        if l & 0x1:
-            binary = "1" + binary
-        else:
-            binary = "0" + binary
+        binary = f"1{binary}" if l & 0x1 else f"0{binary}"
         l = l >> 1
         if not ((i + 1) % 8):
             items.append(binary)
@@ -113,24 +110,17 @@ def pad(data, size):
     """
     data = tobytes(data)
     if size > 1:
-        remainder = len(data) % size
-        if remainder:
+        if remainder := len(data) % size:
             data += b"\0" * (size - remainder)
     return data
 
 
 def tostr(s, encoding="ascii", errors="strict"):
-    if not isinstance(s, str):
-        return s.decode(encoding, errors)
-    else:
-        return s
+    return s.decode(encoding, errors) if not isinstance(s, str) else s
 
 
 def tobytes(s, encoding="ascii", errors="strict"):
-    if isinstance(s, str):
-        return s.encode(encoding, errors)
-    else:
-        return bytes(s)
+    return s.encode(encoding, errors) if isinstance(s, str) else bytes(s)
 
 
 def bytechr(n):

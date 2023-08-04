@@ -98,12 +98,12 @@ class XMLReader(object):
             subFile = os.path.join(dirname, subFile)
         if not stackSize:
             if name != "ttFont":
-                raise TTXParseError("illegal root tag: %s" % name)
+                raise TTXParseError(f"illegal root tag: {name}")
             if self.ttFont.reader is None and not self.ttFont.tables:
                 sfntVersion = attrs.get("sfntVersion")
                 if sfntVersion is not None:
                     if len(sfntVersion) != 4:
-                        sfntVersion = safeEval('"' + sfntVersion + '"')
+                        sfntVersion = safeEval(f'"{sfntVersion}"')
                     self.ttFont.sfntVersion = sfntVersion
             self.contentStack.append([])
         elif stackSize == 1:
@@ -113,7 +113,7 @@ class XMLReader(object):
                 self.contentStack.append([])
                 return
             tag = ttLib.xmlToTag(name)
-            msg = "Parsing '%s' table..." % tag
+            msg = f"Parsing '{tag}' table..."
             if self.progress:
                 self.progress.setLabel(msg)
             log.info(msg)

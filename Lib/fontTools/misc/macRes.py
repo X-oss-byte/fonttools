@@ -49,7 +49,7 @@ class ResourceReader(MutableMapping):
     def openResourceFork(path):
         if hasattr(path, "__fspath__"):  # support os.PathLike objects
             path = path.__fspath__()
-        with open(path + "/..namedfork/rsrc", "rb") as resfork:
+        with open(f"{path}/..namedfork/rsrc", "rb") as resfork:
             data = resfork.read()
         infile = BytesIO(data)
         infile.name = path
@@ -151,8 +151,7 @@ class ResourceReader(MutableMapping):
 
     def getIndices(self, resType):
         """Returns a list of indices of resources of a given type."""
-        numRes = self.countResources(resType)
-        if numRes:
+        if numRes := self.countResources(resType):
             return list(range(1, numRes + 1))
         else:
             return []
@@ -176,10 +175,7 @@ class ResourceReader(MutableMapping):
     def getNamedResource(self, resType, name):
         """Return the named resource of given type, else return None."""
         name = tostr(name, encoding="mac-roman")
-        for res in self.get(resType, []):
-            if res.name == name:
-                return res
-        return None
+        return next((res for res in self.get(resType, []) if res.name == name), None)
 
     def close(self):
         if not self.file.closed:
@@ -217,7 +213,7 @@ class Resource(object):
             return
         absNameOffset = reader.absNameListOffset + self.nameOffset
         (nameLength,) = struct.unpack("B", reader._read(1, absNameOffset))
-        (name,) = struct.unpack(">%ss" % nameLength, reader._read(nameLength))
+        (name,) = struct.unpack(f">{nameLength}s", reader._read(nameLength))
         self.name = tostr(name, encoding="mac-roman")
 
 

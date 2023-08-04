@@ -220,7 +220,7 @@ class TTGlyphPen(_TTGlyphBasePen, LoggingPen):
             self._addPoint(points[-1], 1)
 
     def qCurveTo(self, *points) -> None:
-        assert len(points) >= 1
+        assert points
         for pt in points[:-1]:
             self._addPoint(pt, 0)
 
@@ -237,10 +237,7 @@ class TTGlyphPen(_TTGlyphBasePen, LoggingPen):
             return
 
         if not self.outputImpliedClosingLine:
-            # if first and last point on this path are the same, remove last
-            startPt = 0
-            if self.endPts:
-                startPt = self.endPts[-1] + 1
+            startPt = self.endPts[-1] + 1 if self.endPts else 0
             if self.points[startPt] == self.points[endPt]:
                 self._popPoint()
                 endPt -= 1
@@ -323,9 +320,7 @@ class TTGlyphPointPen(_TTGlyphBasePen, LogMixin, AbstractPointPen):
             raise PenError("Can't add a point to a closed contour.")
         if segmentType is None:
             self.types.append(0)
-        elif segmentType in ("line", "move"):
-            self.types.append(flagOnCurve)
-        elif segmentType == "qcurve":
+        elif segmentType in ("line", "move", "qcurve"):
             self.types.append(flagOnCurve)
         elif segmentType == "curve":
             self.types.append("curve")

@@ -481,7 +481,7 @@ def intersect(self, glyphs):
 @_add_method(otTables.Coverage)
 def intersect_glyphs(self, glyphs):
     """Returns set of intersecting glyphs."""
-    return set(g for g in self.glyphs if g in glyphs)
+    return {g for g in self.glyphs if g in glyphs}
 
 
 @_add_method(otTables.Coverage)
@@ -511,8 +511,8 @@ def intersect(self, glyphs):
 def intersect_class(self, glyphs, klass):
     """Returns set of glyphs matching class."""
     if klass == 0:
-        return set(g for g in glyphs if g not in self.classDefs)
-    return set(g for g, v in self.classDefs.items() if v == klass and g in glyphs)
+        return {g for g in glyphs if g not in self.classDefs}
+    return {g for g, v in self.classDefs.items() if v == klass and g in glyphs}
 
 
 @_add_method(otTables.ClassDef)
@@ -623,7 +623,7 @@ def closure_glyphs(self, s, cur_glyphs):
             return
         s.glyphs.update(self.Substitute[i] for i in indices)
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.ReverseChainSingleSubst)
@@ -644,7 +644,7 @@ def subset_glyphs(self, s):
             )
         )
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.Device)
@@ -672,7 +672,7 @@ def subset_glyphs(self, s):
         self.ValueCount = len(self.Value)
         return bool(self.ValueCount)
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.SinglePos)
@@ -750,7 +750,7 @@ def subset_glyphs(self, s):
             and self.Coverage.subset(s.glyphs)
         )
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.PairPos)
@@ -784,7 +784,7 @@ def subset_glyphs(self, s):
         self.EntryExitCount = len(self.EntryExitRecord)
         return bool(self.EntryExitCount)
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.Anchor)
@@ -835,7 +835,7 @@ def subset_glyphs(self, s):
             self.ClassCount and self.MarkArray.MarkCount and self.BaseArray.BaseCount
         )
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.MarkBasePos)
@@ -878,7 +878,7 @@ def subset_glyphs(self, s):
             and self.LigatureArray.LigatureCount
         )
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.MarkLigPos)
@@ -919,7 +919,7 @@ def subset_glyphs(self, s):
             self.ClassCount and self.Mark1Array.MarkCount and self.Mark2Array.MarkCount
         )
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.MarkMarkPos)
@@ -1008,6 +1008,9 @@ def may_have_non_1to1(self):
     otTables.ChainContextPos,
 )
 def __subset_classify_context(self):
+
+
+
     class ContextHelper(object):
         def __init__(self, klass, Format):
             if klass.__name__.endswith("Subst"):
@@ -1033,7 +1036,7 @@ def __subset_classify_context(self):
             self.InputIdx = InputIdx
             self.DataLen = DataLen
 
-            self.LookupRecord = Type + "LookupRecord"
+            self.LookupRecord = f"{Type}LookupRecord"
 
             if Format == 1:
                 Coverage = lambda r: r.Coverage
@@ -1113,7 +1116,7 @@ def __subset_classify_context(self):
                     ) = (len(x) for x in d)
 
             else:
-                assert 0, "unknown format: %s" % Format
+                assert 0, f"unknown format: {Format}"
 
             if Chain:
                 self.Coverage = ChainCoverage
@@ -1129,16 +1132,16 @@ def __subset_classify_context(self):
                 self.SetRuleData = SetRuleData
 
             if Format == 1:
-                self.Rule = ChainTyp + "Rule"
-                self.RuleCount = ChainTyp + "RuleCount"
-                self.RuleSet = ChainTyp + "RuleSet"
-                self.RuleSetCount = ChainTyp + "RuleSetCount"
+                self.Rule = f"{ChainTyp}Rule"
+                self.RuleCount = f"{ChainTyp}RuleCount"
+                self.RuleSet = f"{ChainTyp}RuleSet"
+                self.RuleSetCount = f"{ChainTyp}RuleSetCount"
                 self.Intersect = lambda glyphs, c, r: [r] if r in glyphs else []
             elif Format == 2:
-                self.Rule = ChainTyp + "ClassRule"
-                self.RuleCount = ChainTyp + "ClassRuleCount"
-                self.RuleSet = ChainTyp + "ClassSet"
-                self.RuleSetCount = ChainTyp + "ClassSetCount"
+                self.Rule = f"{ChainTyp}ClassRule"
+                self.RuleCount = f"{ChainTyp}ClassRuleCount"
+                self.RuleSet = f"{ChainTyp}ClassSet"
+                self.RuleSetCount = f"{ChainTyp}ClassSetCount"
                 self.Intersect = lambda glyphs, c, r: (
                     c.intersect_class(glyphs, r)
                     if c
@@ -1150,6 +1153,7 @@ def __subset_classify_context(self):
                 self.Input = "Input" if Chain else "Class"
             elif Format == 3:
                 self.Input = "InputCoverage" if Chain else "Coverage"
+
 
     if self.Format not in [1, 2, 3]:
         return None  # Don't shoot the messenger; let it go
@@ -1193,11 +1197,10 @@ def closure_glyphs(self, s, cur_glyphs):
                     if seqi in chaos:
                         # TODO Can we improve this?
                         pos_glyphs = None
+                    elif seqi == 0:
+                        pos_glyphs = frozenset([c.Coverage(self).glyphs[i]])
                     else:
-                        if seqi == 0:
-                            pos_glyphs = frozenset([c.Coverage(self).glyphs[i]])
-                        else:
-                            pos_glyphs = frozenset([r.Input[seqi - 1]])
+                        pos_glyphs = frozenset([r.Input[seqi - 1]])
                     lookup = s.table.LookupList.Lookup[ll.LookupListIndex]
                     chaos.add(seqi)
                     if lookup.may_have_non_1to1():
@@ -1228,17 +1231,16 @@ def closure_glyphs(self, s, cur_glyphs):
                     if seqi in chaos:
                         # TODO Can we improve this?
                         pos_glyphs = None
+                    elif seqi == 0:
+                        pos_glyphs = frozenset(
+                            ClassDef.intersect_class(cur_glyphs, i)
+                        )
                     else:
-                        if seqi == 0:
-                            pos_glyphs = frozenset(
-                                ClassDef.intersect_class(cur_glyphs, i)
+                        pos_glyphs = frozenset(
+                            ClassDef.intersect_class(
+                                s.glyphs, getattr(r, c.Input)[seqi - 1]
                             )
-                        else:
-                            pos_glyphs = frozenset(
-                                ClassDef.intersect_class(
-                                    s.glyphs, getattr(r, c.Input)[seqi - 1]
-                                )
-                            )
+                        )
                     lookup = s.table.LookupList.Lookup[ll.LookupListIndex]
                     chaos.add(seqi)
                     if lookup.may_have_non_1to1():
@@ -1257,20 +1259,19 @@ def closure_glyphs(self, s, cur_glyphs):
             if seqi in chaos:
                 # TODO Can we improve this?
                 pos_glyphs = None
+            elif seqi == 0:
+                pos_glyphs = frozenset(cur_glyphs)
             else:
-                if seqi == 0:
-                    pos_glyphs = frozenset(cur_glyphs)
-                else:
-                    pos_glyphs = frozenset(
-                        input_coverages[seqi].intersect_glyphs(s.glyphs)
-                    )
+                pos_glyphs = frozenset(
+                    input_coverages[seqi].intersect_glyphs(s.glyphs)
+                )
             lookup = s.table.LookupList.Lookup[ll.LookupListIndex]
             chaos.add(seqi)
             if lookup.may_have_non_1to1():
                 chaos.update(range(seqi, len(input_coverages) + 1))
             lookup.closure_glyphs(s, cur_glyphs=pos_glyphs)
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(
@@ -1366,7 +1367,7 @@ def subset_glyphs(self, s):
     elif self.Format == 3:
         return all(x is not None and x.subset(s.glyphs) for x in c.RuleData(self))
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(
@@ -1413,7 +1414,7 @@ def subset_lookups(self, lookup_indices):
                 continue
             ll.LookupListIndex = lookup_indices.index(ll.LookupListIndex)
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(
@@ -1438,7 +1439,7 @@ def collect_lookups(self):
     elif self.Format == 3:
         return [ll.LookupListIndex for ll in getattr(self, c.LookupRecord) if ll]
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.ExtensionSubst)
@@ -1446,7 +1447,7 @@ def closure_glyphs(self, s, cur_glyphs):
     if self.Format == 1:
         self.ExtSubTable.closure_glyphs(s, cur_glyphs)
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.ExtensionSubst)
@@ -1454,7 +1455,7 @@ def may_have_non_1to1(self):
     if self.Format == 1:
         return self.ExtSubTable.may_have_non_1to1()
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.ExtensionSubst, otTables.ExtensionPos)
@@ -1462,7 +1463,7 @@ def subset_glyphs(self, s):
     if self.Format == 1:
         return self.ExtSubTable.subset_glyphs(s)
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.ExtensionSubst, otTables.ExtensionPos)
@@ -1470,7 +1471,7 @@ def prune_post_subset(self, font, options):
     if self.Format == 1:
         return self.ExtSubTable.prune_post_subset(font, options)
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.ExtensionSubst, otTables.ExtensionPos)
@@ -1478,7 +1479,7 @@ def subset_lookups(self, lookup_indices):
     if self.Format == 1:
         return self.ExtSubTable.subset_lookups(lookup_indices)
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.ExtensionSubst, otTables.ExtensionPos)
@@ -1486,7 +1487,7 @@ def collect_lookups(self):
     if self.Format == 1:
         return self.ExtSubTable.collect_lookups()
     else:
-        assert 0, "unknown format: %s" % self.Format
+        assert 0, f"unknown format: {self.Format}"
 
 
 @_add_method(otTables.Lookup)
@@ -2218,7 +2219,7 @@ def subset_glyphs(self, s):
 @_add_method(ttLib.getTableClass("ankr"))
 def subset_glyphs(self, s):
     table = self.table.AnchorPoints
-    assert table.Format == 0, "unknown 'ankr' format %s" % table.Format
+    assert table.Format == 0, f"unknown 'ankr' format {table.Format}"
     table.Anchors = {
         glyph: table.Anchors[glyph] for glyph in s.glyphs if glyph in table.Anchors
     }
@@ -2240,11 +2241,11 @@ def subset_glyphs(self, s):
             glyph: table.BaselineValues.get(glyph, table.DefaultBaseline)
             for glyph in s.glyphs
         }
-        if len(baselines) > 0:
+        if baselines:
             mostCommon, _cnt = Counter(baselines.values()).most_common(1)[0]
             table.DefaultBaseline = mostCommon
             baselines = {glyph: b for glyph, b in baselines.items() if b != mostCommon}
-        if len(baselines) > 0:
+        if baselines:
             table.BaselineValues = baselines
         else:
             table.Format = {1: 0, 3: 2}[table.Format]
@@ -2261,7 +2262,7 @@ def subset_glyphs(self, s):
         }
         return len(table.Carets) > 0
     else:
-        assert False, "unknown 'lcar' format %s" % table.Format
+        assert False, f"unknown 'lcar' format {table.Format}"
 
 
 @_add_method(ttLib.getTableClass("gvar"))
@@ -2397,7 +2398,7 @@ def subset_glyphs(self, s):
         }
         return len(table.OpticalBoundsPoints) > 0
     else:
-        assert False, "unknown 'opbd' format %s" % table.Format
+        assert False, f"unknown 'opbd' format {table.Format}"
 
 
 @_add_method(ttLib.getTableClass("post"))
@@ -2427,13 +2428,13 @@ def subset_glyphs(self, s):
         prop.Properties = {
             g: prop for g, prop in prop.Properties.items() if prop != mostCommon
         }
-        if len(prop.Properties) == 0:
+        if not prop.Properties:
             del prop.Properties
             prop.Format = 0
             return prop.DefaultProperties != 0
         return True
     else:
-        assert False, "unknown 'prop' format %s" % prop.Format
+        assert False, f"unknown 'prop' format {prop.Format}"
 
 
 def _paint_glyph_names(paint, colr):
@@ -2595,9 +2596,7 @@ def prune_post_subset(self, font, options):
 
 @_add_method(otTables.MathGlyphConstruction)
 def closure_glyphs(self, glyphs):
-    variants = set()
-    for v in self.MathGlyphVariantRecord:
-        variants.add(v.VariantGlyph)
+    variants = {v.VariantGlyph for v in self.MathGlyphVariantRecord}
     if self.GlyphAssembly:
         for p in self.GlyphAssembly.PartRecords:
             variants.add(p.glyph)
@@ -2707,10 +2706,7 @@ def remapComponentsFast(self, glyphidmap):
         i += 4
         flags = int(flags)
 
-        if flags & 0x0001:
-            i += 4  # ARG_1_AND_2_ARE_WORDS
-        else:
-            i += 2
+        i += 4 if flags & 0x0001 else 2
         if flags & 0x0008:
             i += 2  # WE_HAVE_A_SCALE
         elif flags & 0x0040:

@@ -23,7 +23,7 @@ def add_method(*clazzes, **kwargs):
             assert allowDefault or clazz != DefaultTable, "Oops, table class not found."
             assert (
                 method.__name__ not in clazz.__dict__
-            ), "Oops, class '%s' has method '%s'." % (clazz.__name__, method.__name__)
+            ), f"Oops, class '{clazz.__name__}' has method '{method.__name__}'."
             setattr(clazz, method.__name__, method)
         return None
 
@@ -53,9 +53,7 @@ def mergeObjects(lst):
             try:
                 mergeLogic = logic["*"]
             except KeyError:
-                raise Exception(
-                    "Don't know how to merge key %s of class %s" % (key, clazz.__name__)
-                )
+                raise Exception(f"Don't know how to merge key {key} of class {clazz.__name__}")
         if mergeLogic is NotImplemented:
             continue
         value = mergeLogic(getattr(table, key, NotImplemented) for table in lst)

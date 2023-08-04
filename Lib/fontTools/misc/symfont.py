@@ -16,7 +16,7 @@ C = tuple(sp.symbols("c:%d" % (n + 1), real=False))
 
 # Cubic Bernstein basis functions
 BinomialCoefficient = [(1, 0)]
-for i in range(1, n + 1):
+for _ in range(1, n + 1):
     last = BinomialCoefficient[-1]
     this = tuple(last[j - 1] + last[j] for j in range(len(last))) + (0,)
     BinomialCoefficient.append(this)
@@ -33,11 +33,11 @@ BezierCurve = tuple(
         sum(P[i][j] * bernstein for i, bernstein in enumerate(bernsteins))
         for j in range(2)
     )
-    for n, bernsteins in enumerate(BernsteinPolynomial)
+    for bernsteins in BernsteinPolynomial
 )
 BezierCurveC = tuple(
     sum(C[i] * bernstein for i, bernstein in enumerate(bernsteins))
-    for n, bernsteins in enumerate(BernsteinPolynomial)
+    for bernsteins in BernsteinPolynomial
 )
 
 
@@ -65,11 +65,11 @@ class GreenPen(BasePen):
     _BezierFuncs = {}
 
     @classmethod
-    def _getGreenBezierFuncs(celf, func):
+    def _getGreenBezierFuncs(cls, func):
         funcstr = str(func)
-        if not funcstr in celf._BezierFuncs:
-            celf._BezierFuncs[funcstr] = _BezierFuncsLazy(func)
-        return celf._BezierFuncs[funcstr]
+        if funcstr not in cls._BezierFuncs:
+            cls._BezierFuncs[funcstr] = _BezierFuncsLazy(func)
+        return cls._BezierFuncs[funcstr]
 
     def __init__(self, func, glyphset=None):
         BasePen.__init__(self, glyphset)
@@ -117,7 +117,7 @@ MomentXYPen = partial(GreenPen, func=x * y)
 def printGreenPen(penName, funcs, file=sys.stdout, docstring=None):
 
     if docstring is not None:
-        print('"""%s"""' % docstring)
+        print(f'"""{docstring}"""')
 
     print(
         """from fontTools.pens.basePen import BasePen, OpenContourError

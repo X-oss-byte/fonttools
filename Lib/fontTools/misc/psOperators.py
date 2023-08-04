@@ -9,10 +9,10 @@ class ps_object(object):
 
     def __init__(self, value):
         self.value = value
-        self.type = self.__class__.__name__[3:] + "type"
+        self.type = f"{self.__class__.__name__[3:]}type"
 
     def __repr__(self):
-        return "<%s %s>" % (self.__class__.__name__[3:], repr(self.value))
+        return f"<{self.__class__.__name__[3:]} {repr(self.value)}>"
 
 
 class ps_operator(ps_object):
@@ -22,10 +22,10 @@ class ps_operator(ps_object):
     def __init__(self, name, function):
         self.name = name
         self.function = function
-        self.type = self.__class__.__name__[3:] + "type"
+        self.type = f"{self.__class__.__name__[3:]}type"
 
     def __repr__(self):
-        return "<operator %s>" % self.name
+        return f"<operator {self.name}>"
 
 
 class ps_procedure(ps_object):
@@ -38,7 +38,7 @@ class ps_procedure(ps_object):
         psstring = "{"
         for i in range(len(self.value)):
             if i:
-                psstring = psstring + " " + str(self.value[i])
+                psstring = f"{psstring} {str(self.value[i])}"
             else:
                 psstring = psstring + str(self.value[i])
         return psstring + "}"
@@ -48,15 +48,12 @@ class ps_name(ps_object):
     literal = 0
 
     def __str__(self):
-        if self.literal:
-            return "/" + self.value
-        else:
-            return self.value
+        return f"/{self.value}" if self.literal else self.value
 
 
 class ps_literal(ps_object):
     def __str__(self):
-        return "/" + self.value
+        return f"/{self.value}"
 
 
 class ps_array(ps_object):
@@ -66,12 +63,12 @@ class ps_array(ps_object):
             item = self.value[i]
             access = _accessstrings[item.access]
             if access:
-                access = " " + access
+                access = f" {access}"
             if i:
-                psstring = psstring + " " + str(item) + access
+                psstring = f"{psstring} {str(item)}{access}"
             else:
                 psstring = psstring + str(item) + access
-        return psstring + "]"
+        return f"{psstring}]"
 
     def __repr__(self):
         return "<array>"
@@ -109,14 +106,14 @@ def _type1_item_repr(key, value):
     psstring = ""
     access = _accessstrings[value.access]
     if access:
-        access = access + " "
+        access = f"{access} "
     if key == "CharStrings":
-        psstring = psstring + "/%s %s def\n" % (
+        psstring += "/%s %s def\n" % (
             key,
             _type1_CharString_repr(value.value),
         )
     elif key == "Encoding":
-        psstring = psstring + _type1_Encoding_repr(value, access)
+        psstring += _type1_Encoding_repr(value, access)
     else:
         psstring = psstring + "/%s %s %sdef\n" % (str(key), str(value), access)
     return psstring
@@ -182,9 +179,9 @@ class ps_dict(ps_object):
         for key, value in items:
             access = _accessstrings[value.access]
             if access:
-                access = access + " "
+                access = f"{access} "
             psstring = psstring + "/%s %s %sdef\n" % (str(key), str(value), access)
-        return psstring + "end "
+        return f"{psstring}end "
 
     def __repr__(self):
         return "<dict>"
@@ -193,31 +190,28 @@ class ps_dict(ps_object):
 class ps_mark(ps_object):
     def __init__(self):
         self.value = "mark"
-        self.type = self.__class__.__name__[3:] + "type"
+        self.type = f"{self.__class__.__name__[3:]}type"
 
 
 class ps_procmark(ps_object):
     def __init__(self):
         self.value = "procmark"
-        self.type = self.__class__.__name__[3:] + "type"
+        self.type = f"{self.__class__.__name__[3:]}type"
 
 
 class ps_null(ps_object):
     def __init__(self):
-        self.type = self.__class__.__name__[3:] + "type"
+        self.type = f"{self.__class__.__name__[3:]}type"
 
 
 class ps_boolean(ps_object):
     def __str__(self):
-        if self.value:
-            return "true"
-        else:
-            return "false"
+        return "true" if self.value else "false"
 
 
 class ps_string(ps_object):
     def __str__(self):
-        return "(%s)" % repr(self.value)[1:-1]
+        return f"({repr(self.value)[1:-1]})"
 
 
 class ps_integer(ps_object):
@@ -246,15 +240,14 @@ class PSOperators(object):
             item = proc.value[i]
             if item.type == "proceduretype":
                 self.proc_bind(item)
-            else:
-                if not item.literal:
-                    try:
-                        obj = self.resolve_name(item.value)
-                    except:
-                        pass
-                    else:
-                        if obj.type == "operatortype":
-                            proc.value[i] = obj
+            elif not item.literal:
+                try:
+                    obj = self.resolve_name(item.value)
+                except:
+                    pass
+                else:
+                    if obj.type == "operatortype":
+                        proc.value[i] = obj
 
     def ps_exch(self):
         if len(self.stack) < 2:
@@ -386,20 +379,17 @@ class PSOperators(object):
 
     def ps_readonly(self):
         obj = self.pop()
-        if obj.access < 1:
-            obj.access = 1
+        obj.access = max(obj.access, 1)
         self.push(obj)
 
     def ps_executeonly(self):
         obj = self.pop()
-        if obj.access < 2:
-            obj.access = 2
+        obj.access = max(obj.access, 2)
         self.push(obj)
 
     def ps_noaccess(self):
         obj = self.pop()
-        if obj.access < 3:
-            obj.access = 3
+        obj.access = max(obj.access, 3)
         self.push(obj)
 
     def ps_not(self):
@@ -445,9 +435,7 @@ class PSOperators(object):
         obj2 = self.pop()
         obj3 = self.pop("arraytype", "dicttype", "stringtype", "proceduretype")
         tp = obj3.type
-        if tp == "arraytype" or tp == "proceduretype":
-            obj3.value[obj2.value] = obj1
-        elif tp == "dicttype":
+        if tp in ["arraytype", "proceduretype", "dicttype"]:
             obj3.value[obj2.value] = obj1
         elif tp == "stringtype":
             index = obj2.value
@@ -455,15 +443,11 @@ class PSOperators(object):
 
     def ps_get(self):
         obj1 = self.pop()
-        if obj1.value == "Encoding":
-            pass
         obj2 = self.pop(
             "arraytype", "dicttype", "stringtype", "proceduretype", "fonttype"
         )
         tp = obj2.type
-        if tp in ("arraytype", "proceduretype"):
-            self.push(obj2.value[obj1.value])
-        elif tp in ("dicttype", "fonttype"):
+        if tp in ("arraytype", "proceduretype", "dicttype", "fonttype"):
             self.push(obj2.value[obj1.value])
         elif tp == "stringtype":
             self.push(ps_integer(ord(obj2.value[obj1.value])))
@@ -508,12 +492,8 @@ class PSOperators(object):
         increment = self.pop("integertype", "realtype").value
         i = self.pop("integertype", "realtype").value
         while 1:
-            if increment > 0:
-                if i > limit:
-                    break
-            else:
-                if i < limit:
-                    break
+            if increment > 0 and i > limit or increment <= 0 and i < limit:
+                break
             if type(i) == type(0.0):
                 self.push(ps_real(i))
             else:

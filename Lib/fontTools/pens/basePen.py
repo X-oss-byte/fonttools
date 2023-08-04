@@ -218,7 +218,7 @@ class DecomposingPen(LoggingPen):
         except KeyError:
             if not self.skipMissingComponents:
                 raise MissingComponentError(glyphName)
-            self.log.warning("glyph '%s' is missing from glyphSet; skipped" % glyphName)
+            self.log.warning(f"glyph '{glyphName}' is missing from glyphSet; skipped")
         else:
             tPen = TransformPen(self, transformation)
             glyph.draw(tPen)
@@ -416,16 +416,13 @@ class _TestPen(BasePen):
     """Test class that prints PostScript to stdout."""
 
     def _moveTo(self, pt):
-        print("%s %s moveto" % (pt[0], pt[1]))
+        print(f"{pt[0]} {pt[1]} moveto")
 
     def _lineTo(self, pt):
-        print("%s %s lineto" % (pt[0], pt[1]))
+        print(f"{pt[0]} {pt[1]} lineto")
 
     def _curveToOne(self, bcp1, bcp2, pt):
-        print(
-            "%s %s %s %s %s %s curveto"
-            % (bcp1[0], bcp1[1], bcp2[0], bcp2[1], pt[0], pt[1])
-        )
+        print(f"{bcp1[0]} {bcp1[1]} {bcp2[0]} {bcp2[1]} {pt[0]} {pt[1]} curveto")
 
     def _closePath(self):
         print("closepath")

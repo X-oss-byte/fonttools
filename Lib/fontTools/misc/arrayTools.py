@@ -347,10 +347,7 @@ def pairwise(iterable, reverse=False):
     """
     if not iterable:
         return
-    if reverse:
-        it = reversed(iterable)
-    else:
-        it = iter(iterable)
+    it = reversed(iterable) if reverse else iter(iterable)
     first = next(it, None)
     a = first
     for b in it:

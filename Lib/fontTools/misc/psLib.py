@@ -77,10 +77,7 @@ class PSTokenizer(object):
         """
         if self.closed:
             raise ValueError("I/O operation on closed file")
-        if n is None or n < 0:
-            newpos = self.len
-        else:
-            newpos = min(self.pos + n, self.len)
+        newpos = self.len if n is None or n < 0 else min(self.pos + n, self.len)
         r = self.buf[self.pos : newpos]
         self.pos = newpos
         return r
@@ -228,16 +225,19 @@ class PSInterpreter(PSOperators):
             raise
 
     def handle_object(self, object):
-        if not (self.proclevel or object.literal or object.type == "proceduretype"):
+        if (
+            not self.proclevel
+            and not object.literal
+            and object.type != "proceduretype"
+        ):
             if object.type != "operatortype":
                 object = self.resolve_name(object.value)
             if object.literal:
                 self.push(object)
+            elif object.type == "proceduretype":
+                self.call_procedure(object)
             else:
-                if object.type == "proceduretype":
-                    self.call_procedure(object)
-                else:
-                    object.function()
+                object.function()
         else:
             self.push(object)
 
@@ -251,7 +251,7 @@ class PSInterpreter(PSOperators):
         for i in range(len(dictstack) - 1, -1, -1):
             if name in dictstack[i]:
                 return dictstack[i][name]
-        raise PSError("name error: " + str(name))
+        raise PSError(f"name error: {str(name)}")
 
     def do_token(
         self,
@@ -268,17 +268,16 @@ class PSInterpreter(PSOperators):
             try:
                 num = float(token)
             except (ValueError, OverflowError):
-                if "#" in token:
-                    hashpos = token.find("#")
-                    try:
-                        base = int(token[:hashpos])
-                        num = int(token[hashpos + 1 :], base)
-                    except (ValueError, OverflowError):
-                        return ps_name(token)
-                    else:
-                        return ps_integer(num)
-                else:
+                if "#" not in token:
                     return ps_name(token)
+                hashpos = token.find("#")
+                try:
+                    base = int(token[:hashpos])
+                    num = int(token[hashpos + 1 :], base)
+                except (ValueError, OverflowError):
+                    return ps_name(token)
+                else:
+                    return ps_integer(num)
             else:
                 return ps_real(num)
         else:
@@ -296,10 +295,8 @@ class PSInterpreter(PSOperators):
     def do_hexstring(self, token):
         hexStr = "".join(token[1:-1].split())
         if len(hexStr) % 2:
-            hexStr = hexStr + "0"
-        cleanstr = []
-        for i in range(0, len(hexStr), 2):
-            cleanstr.append(chr(int(hexStr[i : i + 2], 16)))
+            hexStr += "0"
+        cleanstr = [chr(int(hexStr[i : i + 2], 16)) for i in range(0, len(hexStr), 2)]
         cleanstr = "".join(cleanstr)
         return ps_string(cleanstr)
 
@@ -334,9 +331,7 @@ class PSInterpreter(PSOperators):
         object = stack[-1]
         if types:
             if object.type not in types:
-                raise PSError(
-                    "typecheck, expected %s, found %s" % (repr(types), object.type)
-                )
+                raise PSError(f"typecheck, expected {repr(types)}, found {object.type}")
         del stack[-1]
         return object
 
@@ -359,9 +354,7 @@ class PSInterpreter(PSOperators):
 def unpack_item(item):
     tp = type(item.value)
     if tp == dict:
-        newitem = {}
-        for key, value in item.value.items():
-            newitem[key] = unpack_item(value)
+        newitem = {key: unpack_item(value) for key, value in item.value.items()}
     elif tp == list:
         newitem = [None] * len(item.value)
         for i in range(len(item.value)):
@@ -374,9 +367,8 @@ def unpack_item(item):
 
 
 def suckfont(data, encoding="ascii"):
-    m = re.search(rb"/FontName\s+/([^ \t\n\r]+)\s+def", data)
-    if m:
-        fontName = m.group(1)
+    if m := re.search(rb"/FontName\s+/([^ \t\n\r]+)\s+def", data):
+        fontName = m[1]
         fontName = fontName.decode()
     else:
         fontName = None

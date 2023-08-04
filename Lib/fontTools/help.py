@@ -19,8 +19,7 @@ def main():
         except ImportError as e:
             continue
         try:
-            description = imports.main.__doc__
-            if description:
+            if description := imports.main.__doc__:
                 pkg = pkg.replace("fontTools.", "").replace(".__main__", "")
                 # show the docstring's first line only
                 descriptions[pkg] = description.splitlines()[0]

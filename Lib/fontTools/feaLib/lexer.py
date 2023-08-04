@@ -157,13 +157,12 @@ class Lexer(object):
         if cur_char == '"':
             self.pos_ += 1
             self.scan_until_('"')
-            if self.pos_ < self.text_length_ and self.text_[self.pos_] == '"':
-                self.pos_ += 1
-                # strip newlines embedded within a string
-                string = re.sub("[\r\n]", "", text[start + 1 : self.pos_ - 1])
-                return (Lexer.STRING, string, location)
-            else:
+            if self.pos_ >= self.text_length_ or self.text_[self.pos_] != '"':
                 raise FeatureLibError("Expected '\"' to terminate string", location)
+            self.pos_ += 1
+            # strip newlines embedded within a string
+            string = re.sub("[\r\n]", "", text[start + 1 : self.pos_ - 1])
+            return (Lexer.STRING, string, location)
         raise FeatureLibError("Unexpected character: %r" % cur_char, location)
 
     def scan_over_(self, valid):
@@ -236,35 +235,34 @@ class IncludingLexer(object):
             except StopIteration:
                 self.lexers_.pop()
                 continue
-            if token_type is Lexer.NAME and token == "include":
-                fname_type, fname_token, fname_location = lexer.next()
-                if fname_type is not Lexer.FILENAME:
-                    raise FeatureLibError("Expected file name", fname_location)
-                # semi_type, semi_token, semi_location = lexer.next()
-                # if semi_type is not Lexer.SYMBOL or semi_token != ";":
-                #    raise FeatureLibError("Expected ';'", semi_location)
-                if os.path.isabs(fname_token):
-                    path = fname_token
-                else:
-                    if self.includeDir is not None:
-                        curpath = self.includeDir
-                    elif self.featurefilepath is not None:
-                        curpath = os.path.dirname(self.featurefilepath)
-                    else:
-                        # if the IncludingLexer was initialized from an in-memory
-                        # file-like stream, it doesn't have a 'name' pointing to
-                        # its filesystem path, therefore we fall back to using the
-                        # current working directory to resolve relative includes
-                        curpath = os.getcwd()
-                    path = os.path.join(curpath, fname_token)
-                if len(self.lexers_) >= 5:
-                    raise FeatureLibError("Too many recursive includes", fname_location)
-                try:
-                    self.lexers_.append(self.make_lexer_(path))
-                except FileNotFoundError as err:
-                    raise IncludedFeaNotFound(fname_token, fname_location) from err
-            else:
+            if token_type is not Lexer.NAME or token != "include":
                 return (token_type, token, location)
+            fname_type, fname_token, fname_location = lexer.next()
+            if fname_type is not Lexer.FILENAME:
+                raise FeatureLibError("Expected file name", fname_location)
+            # semi_type, semi_token, semi_location = lexer.next()
+            # if semi_type is not Lexer.SYMBOL or semi_token != ";":
+            #    raise FeatureLibError("Expected ';'", semi_location)
+            if os.path.isabs(fname_token):
+                path = fname_token
+            else:
+                if self.includeDir is not None:
+                    curpath = self.includeDir
+                elif self.featurefilepath is not None:
+                    curpath = os.path.dirname(self.featurefilepath)
+                else:
+                    # if the IncludingLexer was initialized from an in-memory
+                    # file-like stream, it doesn't have a 'name' pointing to
+                    # its filesystem path, therefore we fall back to using the
+                    # current working directory to resolve relative includes
+                    curpath = os.getcwd()
+                path = os.path.join(curpath, fname_token)
+            if len(self.lexers_) >= 5:
+                raise FeatureLibError("Too many recursive includes", fname_location)
+            try:
+                self.lexers_.append(self.make_lexer_(path))
+            except FileNotFoundError as err:
+                raise IncludedFeaNotFound(fname_token, fname_location) from err
         raise StopIteration()
 
     @staticmethod

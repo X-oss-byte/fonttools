@@ -86,9 +86,7 @@ class TableBuilder:
         self._callbackTable = callbackTable
 
     def _convert(self, dest, field, converter, value):
-        enumClass = getattr(converter, "enumClass", None)
-
-        if enumClass:
+        if enumClass := getattr(converter, "enumClass", None):
             if isinstance(value, enumClass):
                 pass
             elif isinstance(value, str):
@@ -160,12 +158,12 @@ class TableBuilder:
             for field, value in source.items():
                 if field in skippedFields:
                     continue
-                converter = convByName.get(field, None)
-                if not converter:
+                if converter := convByName.get(field, None):
+                    self._convert(dest, field, converter, value)
+                else:
                     raise ValueError(
                         f"Unrecognized field {field} for {cls}; expected one of {sorted(convByName.keys())}"
                     )
-                self._convert(dest, field, converter, value)
         else:
             # let's try as a 1-tuple
             dest = self.build(cls, (source,))
